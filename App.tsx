@@ -10,6 +10,7 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { useUserStore } from './src/state/userStore';
 import { colors } from './src/theme';
+import { ToastContainer } from './src/components/ui/Toast';
 
 const Tab = createBottomTabNavigator();
 
@@ -116,6 +117,7 @@ export default function App() {
       <NavigationContainer>
         {session ? <AppTabs /> : <AuthScreen />}
       </NavigationContainer>
+      <ToastContainer />
     </>
   );
 }

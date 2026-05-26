@@ -22,6 +22,11 @@ type UserState = {
 };
 
 const buildRedirectUrl = () => {
+  // For web: redirect back to current origin
+  // For native: use custom scheme
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}`;
+  }
   const scheme = 'via';
   return `${scheme}://auth`;
 };

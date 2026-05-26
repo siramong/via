@@ -1,23 +1,38 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { MapBackground } from '../components/MapView';
 import { FuelCard } from '../components/FuelCard';
+import { SkeletonCard } from '../components/ui/Skeleton';
 import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
 import { getCheapestStation } from '../services/pricing';
-import { colors, radius, spacing } from '../theme';
+import { colors, spacing } from '../theme';
 import type { StationResult } from '../types';
 
 export const HomeScreen = () => {
   const { coords, refresh, status: locationStatus, error: locationError } = useLocationStore();
   const { profile, consumeAccess } = useUserStore();
+  const navigation = useNavigation<any>();
   const [result, setResult] = useState<StationResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCheapest = useCallback(async () => {
+  const loadCheapest = useCallback(async (isRefresh = false) => {
     if (!coords) return;
-    setLoading(true);
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       const station = await getCheapestStation(coords);
@@ -32,13 +47,12 @@ export const HomeScreen = () => {
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [coords, consumeAccess, profile]);
 
   useEffect(() => {
-    refresh().catch(() => {
-      // Silently handle location errors for web dev
-    });
+    refresh().catch(() => {});
   }, [refresh]);
 
   useEffect(() => {
@@ -47,23 +61,52 @@ export const HomeScreen = () => {
     }
   }, [coords, loadCheapest]);
 
+  const handleRefresh = useCallback(() => {
+    refresh().catch(() => {});
+    void loadCheapest(true);
+  }, [refresh, loadCheapest]);
+
+  const handleViewOnMap = useCallback(() => {
+    navigation.navigate('Map');
+  }, [navigation]);
+
+  const handleContribute = useCallback(() => {
+    navigation.navigate('Contribute');
+  }, [navigation]);
+
   const locked = (profile?.access_remaining ?? 0) === 0;
+  const showSkeleton = loading || locationStatus === 'loading';
 
   return (
     <View style={styles.container}>
       <MapBackground />
-      <View style={styles.sheet}>
-        {loading || locationStatus === 'loading' ? (
-          <View style={styles.loading}>
-            <ActivityIndicator color={colors.primary} size="large" />
-          </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        {showSkeleton ? (
+          <SkeletonCard />
         ) : (
-          <FuelCard result={result} locked={locked} />
+          <FuelCard
+            result={result}
+            locked={locked}
+            onViewOnMap={handleViewOnMap}
+            onContribute={handleContribute}
+          />
         )}
         {!!locationError && <Text style={styles.error}>{locationError}</Text>}
         {!!error && !error.includes('CORS') && <Text style={styles.error}>{error}</Text>}
-        {!coords && <Text style={styles.hint}>Enable location to find cheapest fuel</Text>}
-      </View>
+        {!coords && !loading && (
+          <Text style={styles.hint}>Enable location to find cheapest fuel</Text>
+        )}
+      </ScrollView>
     </View>
   );
 };
@@ -73,19 +116,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  sheet: {
-    position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: 96,
-  },
-  loading: {
-    backgroundColor: colors.glass,
-    borderRadius: radius.xl,
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 96,
   },
   error: {
     color: colors.danger,

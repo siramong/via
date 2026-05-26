@@ -1,7 +1,9 @@
 import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../state/userStore';
 import { AccessCounter } from '../components/AccessCounter';
+import { MapBackground } from '../components/MapView';
 import { colors, radius, spacing } from '../theme';
 
 export const ProfileScreen = () => {
@@ -14,51 +16,78 @@ export const ProfileScreen = () => {
   if (!profile) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator color={colors.primary} />
+        <MapBackground />
+        <View style={styles.centered}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
-        <Text style={styles.displayName}>{profile.display_name}</Text>
-      </View>
-
-      <AccessCounter remaining={profile.access_remaining} />
-
-      <View style={styles.stats}>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Reputation</Text>
-          <Text style={styles.statValue}>{profile.reputation}</Text>
+    <View style={styles.container}>
+      <MapBackground />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <View style={styles.avatar}>
+            <Ionicons name="person" size={22} color={colors.textPrimary} />
+          </View>
+          <View>
+            <Text style={styles.title}>Profile</Text>
+            <Text style={styles.displayName}>{profile.display_name}</Text>
+          </View>
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Joined</Text>
-          <Text style={styles.statValue}>Day 1</Text>
+
+        <AccessCounter remaining={profile.access_remaining} />
+
+        <View style={styles.stats}>
+          <StatCard icon="shield-checkmark" label="Reputation" value={profile.reputation.toString()} />
+          <StatCard icon="calendar" label="Joined" value="Day 1" />
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>How It Works</Text>
-        <Text style={styles.body}>
-          You start with 3 free queries. Each search uses 1 access point.
-        </Text>
-        <Text style={styles.body}>
-          Contribute verified fuel prices to earn access points back and build your reputation.
-        </Text>
-      </View>
+        <View style={styles.infoCard}>
+          <View style={styles.infoHeader}>
+            <Ionicons name="star" size={16} color={colors.primary} />
+            <Text style={styles.infoTitle}>How it works</Text>
+          </View>
+          <Text style={styles.body}>
+            You start with 3 free queries. Each search uses 1 access point.
+          </Text>
+          <Text style={styles.body}>
+            Contribute verified fuel prices to earn access back and increase reputation.
+          </Text>
+        </View>
 
-      <Pressable style={styles.dangerButton} onPress={handleSignOut} disabled={status === 'loading'}>
-        {status === 'loading' ? (
-          <ActivityIndicator color={colors.danger} />
-        ) : (
-          <Text style={styles.dangerButtonText}>Sign Out</Text>
-        )}
-      </Pressable>
-    </ScrollView>
+        <Pressable style={styles.dangerButton} onPress={handleSignOut} disabled={status === 'loading'}>
+          {status === 'loading' ? (
+            <ActivityIndicator color={colors.danger} />
+          ) : (
+            <>
+              <Ionicons name="log-out" size={16} color={colors.danger} />
+              <Text style={styles.dangerButtonText}>Sign Out</Text>
+            </>
+          )}
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 };
+
+type StatCardProps = {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+};
+
+const StatCard = ({ icon, label, value }: StatCardProps) => (
+  <View style={styles.statCard}>
+    <View style={styles.statHeader}>
+      <Ionicons name={icon} size={16} color={colors.primary} />
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+    <Text style={styles.statValue}>{value}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -67,9 +96,26 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
-    marginBottom: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     color: colors.textSecondary,
@@ -79,9 +125,9 @@ const styles = StyleSheet.create({
   },
   displayName: {
     color: colors.textPrimary,
-    fontSize: 28,
-    fontWeight: '700',
-    marginTop: spacing.sm,
+    fontSize: 26,
+    fontWeight: '800',
+    marginTop: spacing.xs,
   },
   stats: {
     marginTop: spacing.lg,
@@ -90,11 +136,21 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
+    backgroundColor: colors.glass,
+    borderRadius: radius.lg,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+  },
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   statLabel: {
     color: colors.textSecondary,
@@ -105,30 +161,43 @@ const styles = StyleSheet.create({
   statValue: {
     color: colors.textPrimary,
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     marginTop: spacing.sm,
   },
-  section: {
+  infoCard: {
     marginTop: spacing.xl,
+    backgroundColor: colors.glass,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  sectionTitle: {
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  infoTitle: {
     color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: spacing.md,
+    fontSize: 15,
+    fontWeight: '700',
   },
   body: {
     color: colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: spacing.md,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
   },
   dangerButton: {
     marginTop: spacing.xl,
     borderWidth: 1,
     borderColor: colors.danger,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    paddingVertical: 14,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
   dangerButtonText: {
     color: colors.danger,

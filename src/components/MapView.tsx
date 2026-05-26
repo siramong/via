@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../theme';
 import { useLocationStore } from '../state/locationStore';
 import type { StationMarker } from '../types';
@@ -12,9 +13,9 @@ let UrlTile: any = null;
 if (Platform.OS !== 'web') {
   try {
     const maps = require('react-native-maps');
-    MapView = maps.default;
-    Marker = maps.Marker;
-    UrlTile = maps.UrlTile;
+    MapView = maps.default ?? maps;
+    Marker = maps.Marker ?? maps.default?.Marker ?? null;
+    UrlTile = maps.UrlTile ?? maps.default?.UrlTile ?? null;
   } catch (e) {
     // Maps not available
   }
@@ -35,6 +36,7 @@ const defaultRegion = {
 export const MapBackground = ({ interactive = false, markers = [] }: Props) => {
   const { coords } = useLocationStore();
   const mapRef = useRef<any>(null);
+  const showUserLocation = Boolean(coords);
 
   useEffect(() => {
     if (coords && mapRef.current && MapView) {
@@ -69,6 +71,12 @@ export const MapBackground = ({ interactive = false, markers = [] }: Props) => {
   if (Platform.OS === 'web' || !MapView) {
     return (
       <View style={[styles.container, styles.webFallback]}>
+        <LinearGradient
+          colors={[colors.card, colors.background]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
         <View style={styles.overlay} />
       </View>
     );
@@ -85,11 +93,25 @@ export const MapBackground = ({ interactive = false, markers = [] }: Props) => {
         zoomEnabled={interactive}
         pitchEnabled={false}
         toolbarEnabled={false}
-        showsUserLocation
+        showsUserLocation={showUserLocation}
       >
-        <UrlTile urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} />
+        {UrlTile ? (
+          <UrlTile urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} />
+        ) : null}
         {markerElements}
       </MapView>
+      <LinearGradient
+        colors={[colors.overlay, 'transparent']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.topFade}
+      />
+      <LinearGradient
+        colors={['transparent', colors.overlay]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.bottomFade}
+      />
       <View style={styles.overlay} />
     </View>
   );
@@ -105,6 +127,20 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(11, 15, 26, 0.6)',
+    backgroundColor: 'rgba(5, 8, 18, 0.35)',
+  },
+  topFade: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '35%',
+  },
+  bottomFade: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
   },
 });

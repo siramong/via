@@ -231,4 +231,4 @@ See [Expo EAS Build](https://docs.expo.dev/build/introduction/) docs for details
 - **Supabase Docs**: https://supabase.com/docs
 - **PostGIS Docs**: https://postgis.net/docs/
 
-Happy building! 🚀
+Happy building!

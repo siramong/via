@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -12,17 +13,57 @@ import { colors } from './src/theme';
 
 const Tab = createBottomTabNavigator();
 
+const iconForRoute = (name: string, focused: boolean) => {
+  switch (name) {
+    case 'Home':
+      return focused ? 'pricetag' : 'pricetag-outline';
+    case 'Contribute':
+      return focused ? 'camera' : 'camera-outline';
+    case 'Map':
+      return focused ? 'map' : 'map-outline';
+    case 'Profile':
+      return focused ? 'person' : 'person-outline';
+    default:
+      return focused ? 'ellipse' : 'ellipse-outline';
+  }
+};
+
 const AppTabs = () => (
   <Tab.Navigator
-    screenOptions={{
+    screenOptions={({ route }) => ({
       headerShown: false,
       tabBarStyle: {
+        position: 'absolute',
+        left: 16,
+        right: 16,
+        bottom: 16,
+        height: 64,
+        borderRadius: 32,
         backgroundColor: colors.card,
-        borderTopColor: colors.border,
+        borderTopWidth: 0,
+        paddingBottom: 8,
+        paddingTop: 8,
+        shadowColor: '#000',
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 16,
       },
       tabBarActiveTintColor: colors.primary,
       tabBarInactiveTintColor: colors.textSecondary,
-    }}
+      tabBarLabelStyle: {
+        fontSize: 11,
+        fontWeight: '600',
+        marginBottom: 2,
+      },
+      tabBarItemStyle: {
+        paddingVertical: 2,
+      },
+      tabBarHideOnKeyboard: true,
+      tabBarIcon: ({ color, size, focused }) => (
+        <Ionicons name={iconForRoute(route.name, focused)} size={size ?? 22} color={color} />
+      ),
+    })}
   >
     <Tab.Screen
       name="Home"
@@ -71,7 +112,7 @@ export default function App() {
 
   return (
     <>
-      <StatusBar />
+      <StatusBar style="light" />
       <NavigationContainer>
         {session ? <AppTabs /> : <AuthScreen />}
       </NavigationContainer>

@@ -1,7 +1,19 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../state/userStore';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { MapBackground } from '../components/MapView';
 import { colors, radius, spacing } from '../theme';
 
 export const AuthScreen = () => {
@@ -11,6 +23,15 @@ export const AuthScreen = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(12)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start();
+  }, [opacity, translateY]);
 
   const handleGoogleSignIn = useCallback(async () => {
     await signInWithGoogle();
@@ -67,99 +88,107 @@ export const AuthScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.hero}>
+      <MapBackground />
+      <LinearGradient
+        colors={['rgba(9, 14, 28, 0.85)', 'rgba(9, 14, 28, 0.65)', 'rgba(9, 14, 28, 0.9)']}
+        style={StyleSheet.absoluteFill}
+      />
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.brandRow}>
+          <View style={styles.logo}>
+            <Ionicons name="navigate" size={20} color={colors.textPrimary} />
+          </View>
           <Text style={styles.appName}>VIA</Text>
-          <Text style={styles.tagline}>Find the cheapest fuel, instantly</Text>
+        </View>
+        <Text style={styles.tagline}>Live fuel prices powered by your city.</Text>
+
+        <View style={styles.featureList}>
+          <Feature icon="locate" text="Nearest stations in real time" />
+          <Feature icon="pricetags" text="Community verified prices" />
+          <Feature icon="camera" text="Submit a photo in seconds" />
         </View>
 
-        <View style={styles.features}>
-          <Feature icon="📍" text="Real-time geolocation" />
-          <Feature icon="💰" text="Community-verified prices" />
-          <Feature icon="📸" text="Snap a photo to contribute" />
-        </View>
-
-        {/* Email/Password Auth */}
-        <View style={styles.authForm}>
+        <Animated.View style={[styles.authCard, { opacity, transform: [{ translateY }] }]}>
           <View style={styles.modeTabs}>
             <Pressable
               style={[styles.modeTab, mode === 'login' && styles.modeTabActive]}
               onPress={() => setMode('login')}
             >
-              <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>
-                Login
-              </Text>
+              <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>Login</Text>
             </Pressable>
             <Pressable
               style={[styles.modeTab, mode === 'signup' && styles.modeTabActive]}
               onPress={() => setMode('signup')}
             >
               <Text style={[styles.modeTabText, mode === 'signup' && styles.modeTabTextActive]}>
-                Sign Up
+                Create
               </Text>
             </Pressable>
           </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor={colors.textSecondary}
-            value={email}
-            onChangeText={setEmail}
-            editable={!loading}
-            keyboardType="email-address"
-          />
+          <View style={styles.inputRow}>
+            <Ionicons name="mail" size={18} color={colors.textSecondary} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={colors.textSecondary}
+              value={email}
+              onChangeText={setEmail}
+              editable={!loading}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor={colors.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            editable={!loading}
-          />
+          <View style={styles.inputRow}>
+            <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={colors.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!loading}
+            />
+          </View>
 
           {!!authError && <Text style={styles.error}>{authError}</Text>}
 
-          <Pressable
-            style={styles.emailButton}
-            onPress={handleEmailAuth}
-            disabled={loading}
-          >
-            {loading ? (
+          <Pressable onPress={handleEmailAuth} disabled={loading} style={styles.primaryButton}>
+            <LinearGradient colors={[colors.primary, colors.accent]} style={styles.primaryButtonFill}>
+              {loading ? (
+                <ActivityIndicator color={colors.background} />
+              ) : (
+                <Text style={styles.primaryButtonText}>
+                  {mode === 'signup' ? 'Create Account' : 'Sign In'}
+                </Text>
+              )}
+            </LinearGradient>
+          </Pressable>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {!!error && <Text style={styles.error}>{error}</Text>}
+
+          <Pressable style={styles.googleButton} onPress={handleGoogleSignIn} disabled={status === 'loading'}>
+            {status === 'loading' ? (
               <ActivityIndicator color={colors.textPrimary} />
             ) : (
-              <Text style={styles.buttonText}>
-                {mode === 'signup' ? 'Create Account' : 'Sign In'}
-              </Text>
+              <>
+                <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </>
             )}
           </Pressable>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Google OAuth */}
-        {!!error && <Text style={styles.error}>{error}</Text>}
-
-        <Pressable
-          style={styles.googleButton}
-          onPress={handleGoogleSignIn}
-          disabled={status === 'loading'}
-        >
-          {status === 'loading' ? (
-            <ActivityIndicator color={colors.textPrimary} />
-          ) : (
-            <>
-              <Text style={styles.googleIcon}>🔐</Text>
-              <Text style={styles.googleButtonText}>Sign in with Google</Text>
-            </>
-          )}
-        </Pressable>
+        </Animated.View>
 
         <Text style={styles.disclaimer}>
-          No anonymous users. Sign in required to access fuel price data.
+          No anonymous access. Sign in required to view fuel prices.
         </Text>
       </ScrollView>
     </View>
@@ -167,13 +196,15 @@ export const AuthScreen = () => {
 };
 
 type FeatureProps = {
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   text: string;
 };
 
 const Feature = ({ icon, text }: FeatureProps) => (
   <View style={styles.feature}>
-    <Text style={styles.featureIcon}>{icon}</Text>
+    <View style={styles.featureIcon}>
+      <Ionicons name={icon} size={16} color={colors.primary} />
+    </View>
     <Text style={styles.featureText}>{text}</Text>
   </View>
 );
@@ -185,57 +216,77 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
+    paddingVertical: spacing.xxl,
   },
-  hero: {
-    marginBottom: spacing.xl,
+  brandRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
+  },
+  logo: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   appName: {
-    color: colors.primary,
-    fontSize: 48,
-    fontWeight: '900',
-    letterSpacing: 3,
+    color: colors.textPrimary,
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: 1.2,
   },
   tagline: {
     color: colors.textSecondary,
-    fontSize: 16,
     marginTop: spacing.sm,
-    textAlign: 'center',
+    fontSize: 15,
   },
-  features: {
-    marginVertical: spacing.xl,
-    width: '100%',
+  featureList: {
+    marginTop: spacing.xl,
+    gap: spacing.md,
   },
   feature: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
   featureIcon: {
-    fontSize: 24,
-    marginRight: spacing.md,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(76, 201, 240, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   featureText: {
     color: colors.textPrimary,
-    fontSize: 16,
+    fontSize: 15,
   },
-  authForm: {
-    width: '100%',
-    marginVertical: spacing.lg,
+  authCard: {
+    marginTop: spacing.xl,
+    backgroundColor: colors.glass,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
   },
   modeTabs: {
     flexDirection: 'row',
+    backgroundColor: 'rgba(15, 22, 40, 0.7)',
+    borderRadius: 999,
+    padding: 4,
     marginBottom: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.card,
-    overflow: 'hidden',
   },
   modeTab: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: 10,
+    borderRadius: 999,
     alignItems: 'center',
   },
   modeTabActive: {
@@ -246,53 +297,69 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modeTabTextActive: {
-    color: colors.textPrimary,
-  },
-  input: {
-    width: '100%',
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-    fontSize: 14,
-  },
-  emailButton: {
-    width: '100%',
-    backgroundColor: colors.success,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  buttonText: {
     color: colors.background,
-    fontWeight: '600',
-    fontSize: 16,
   },
-  divider: {
-    width: '60%',
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.lg,
-  },
-  googleButton: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 240,
+    gap: spacing.sm,
+    backgroundColor: 'rgba(12, 18, 34, 0.85)',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
   },
-  googleIcon: {
-    fontSize: 20,
-    marginRight: spacing.sm,
+  input: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: 14,
+  },
+  primaryButton: {
+    marginTop: spacing.sm,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  primaryButtonFill: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: radius.lg,
+  },
+  primaryButtonText: {
+    color: colors.background,
+    fontWeight: '700',
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
+  dividerRow: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+  },
+  googleButton: {
+    backgroundColor: 'rgba(18, 26, 46, 0.8)',
+    borderRadius: radius.lg,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   googleButtonText: {
     color: colors.textPrimary,
@@ -300,15 +367,15 @@ const styles = StyleSheet.create({
   },
   error: {
     color: colors.danger,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     textAlign: 'center',
     fontSize: 12,
   },
   disclaimer: {
     color: colors.textSecondary,
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
     textAlign: 'center',
     fontSize: 12,
-    fontStyle: 'italic',
+    lineHeight: 18,
   },
 });

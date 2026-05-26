@@ -5,7 +5,7 @@ import { FuelCard } from '../components/FuelCard';
 import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
 import { getCheapestStation } from '../services/pricing';
-import { colors, spacing } from '../theme';
+import { colors, radius, spacing } from '../theme';
 import type { StationResult } from '../types';
 
 export const HomeScreen = () => {
@@ -52,9 +52,11 @@ export const HomeScreen = () => {
   return (
     <View style={styles.container}>
       <MapBackground />
-      <View style={styles.content}>
+      <View style={styles.sheet}>
         {loading || locationStatus === 'loading' ? (
-          <ActivityIndicator color={colors.primary} size="large" />
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.primary} size="large" />
+          </View>
         ) : (
           <FuelCard result={result} locked={locked} />
         )}
@@ -71,10 +73,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+  sheet: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: 96,
+  },
+  loading: {
+    backgroundColor: colors.glass,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   error: {
     color: colors.danger,

@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '../theme';
 
 type Props = {
@@ -17,11 +18,11 @@ export const PriceSelector = ({ label, value, step = 0.01, onChange }: Props) =>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.controls}>
         <Pressable style={styles.button} onPress={decrement}>
-          <Text style={styles.buttonText}>-</Text>
+          <Ionicons name="remove" size={18} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.value}>${value.toFixed(2)}</Text>
         <Pressable style={styles.button} onPress={increment}>
-          <Text style={styles.buttonText}>+</Text>
+          <Ionicons name="add" size={18} color={colors.textPrimary} />
         </Pressable>
       </View>
     </View>
@@ -30,8 +31,8 @@ export const PriceSelector = ({ label, value, step = 0.01, onChange }: Props) =>
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
+    backgroundColor: colors.glass,
+    borderRadius: radius.lg,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -40,7 +41,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    fontSize: 12,
+    fontSize: 11,
     marginBottom: spacing.sm,
   },
   controls: {
@@ -49,21 +50,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   button: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonText: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '700',
-  },
   value: {
     color: colors.textPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

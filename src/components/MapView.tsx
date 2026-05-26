@@ -1,9 +1,24 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
-import MapView, { Marker, UrlTile } from 'react-native-maps';
+import { StyleSheet, View, Platform } from 'react-native';
 import { colors } from '../theme';
 import { useLocationStore } from '../state/locationStore';
 import type { StationMarker } from '../types';
+
+// Only import maps on native platforms
+let MapView: any = null;
+let Marker: any = null;
+let UrlTile: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    const maps = require('react-native-maps');
+    MapView = maps.default;
+    Marker = maps.Marker;
+    UrlTile = maps.UrlTile;
+  } catch (e) {
+    // Maps not available
+  }
+}
 
 type Props = {
   interactive?: boolean;
@@ -19,10 +34,10 @@ const defaultRegion = {
 
 export const MapBackground = ({ interactive = false, markers = [] }: Props) => {
   const { coords } = useLocationStore();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
 
   useEffect(() => {
-    if (coords && mapRef.current) {
+    if (coords && mapRef.current && MapView) {
       mapRef.current.animateToRegion(
         {
           latitude: coords.latitude,
@@ -36,17 +51,28 @@ export const MapBackground = ({ interactive = false, markers = [] }: Props) => {
   }, [coords]);
 
   const markerElements = useMemo(
-    () =>
-      markers.map((marker) => (
+    () => {
+      if (!Marker) return null;
+      return markers.map((marker) => (
         <Marker
           key={marker.stationId}
           coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
           title={marker.name}
           pinColor={colors.primary}
         />
-      )),
+      ));
+    },
     [markers],
   );
+
+  // Web fallback: simple gradient background
+  if (Platform.OS === 'web' || !MapView) {
+    return (
+      <View style={[styles.container, styles.webFallback]}>
+        <View style={styles.overlay} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container} pointerEvents={interactive ? 'auto' : 'none'}>
@@ -73,6 +99,9 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFill,
     backgroundColor: colors.background,
+  },
+  webFallback: {
+    backgroundColor: colors.card,
   },
   overlay: {
     ...StyleSheet.absoluteFill,

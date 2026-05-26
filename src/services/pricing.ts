@@ -63,6 +63,10 @@ export const getNearbyStations = async (coords: Coordinates): Promise<StationMar
     latitude: Number(station.latitude),
     longitude: Number(station.longitude),
     distanceMeters: Number(station.distance_meters),
+    price: station.price ? Number(station.price) : undefined,
+    fuelType: station.fuel_type ?? undefined,
+    freshness: station.freshness ?? undefined,
+    trustScore: station.trust_score ? Number(station.trust_score) : undefined,
   }));
 };
 

@@ -20,6 +20,10 @@ export type StationMarker = {
   latitude: number;
   longitude: number;
   distanceMeters: number;
+  price?: number;
+  fuelType?: FuelType;
+  freshness?: Freshness;
+  trustScore?: number;
 };
 
 export type UserProfile = {

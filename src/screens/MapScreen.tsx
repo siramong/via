@@ -1,48 +1,68 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { MapBackground } from '../components/MapView';
+import { MapSearchBar } from '../components/MapSearchBar';
+import { StationDetailSheet } from '../components/StationDetailSheet';
 import { useLocationStore } from '../state/locationStore';
 import { getNearbyStations } from '../services/pricing';
-import { colors, spacing } from '../theme';
+import { colors } from '../theme';
 import type { StationMarker } from '../types';
 
 export const MapScreen = () => {
   const { coords, refresh, status } = useLocationStore();
-  const [markers, setMarkers] = useState<StationMarker[]>([]);
+  const [allMarkers, setAllMarkers] = useState<StationMarker[]>([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selectedStation, setSelectedStation] = useState<StationMarker | null>(null);
+  const mapRef = useRef<any>(null);
 
   useEffect(() => {
-    refresh().catch(() => {
-      // Silently handle on web
-    });
+    refresh().catch(() => {});
   }, [refresh]);
 
   useEffect(() => {
     if (!coords) return;
     setLoading(true);
     getNearbyStations(coords)
-      .then(setMarkers)
-      .catch(() => {
-        setMarkers([]);
-      })
+      .then(setAllMarkers)
+      .catch(() => setAllMarkers([]))
       .finally(() => setLoading(false));
   }, [coords]);
 
+  const filteredMarkers = useMemo(() => {
+    if (!search.trim()) return allMarkers;
+    const q = search.toLowerCase();
+    return allMarkers.filter((m) => m.name.toLowerCase().includes(q));
+  }, [allMarkers, search]);
+
+  const handleMarkerPress = useCallback((station: StationMarker) => {
+    setSelectedStation(station);
+  }, []);
+
+  const handleCloseSheet = useCallback(() => {
+    setSelectedStation(null);
+  }, []);
+
   return (
     <View style={styles.container}>
-      <MapBackground interactive markers={markers} />
-      <View style={styles.header}>
-        <View style={styles.headerPill}>
-          <Ionicons name="map" size={16} color={colors.primary} />
-          <Text style={styles.headerText}>Nearby stations</Text>
-        </View>
-      </View>
+      <MapBackground
+        mapRef={mapRef}
+        interactive
+        markers={filteredMarkers}
+        onMarkerPress={handleMarkerPress}
+        selectedStationId={selectedStation?.stationId}
+      />
+      <MapSearchBar
+        value={search}
+        onChange={setSearch}
+        onClear={() => setSearch('')}
+      />
       {(loading || status === 'loading') && (
         <View style={styles.loader}>
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
       )}
+      <StationDetailSheet station={selectedStation} onClose={handleCloseSheet} />
     </View>
   );
 };
@@ -51,33 +71,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    position: 'absolute',
-    top: spacing.xl,
-    left: spacing.lg,
-    right: spacing.lg,
-    alignItems: 'center',
-  },
-  headerPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.glass,
-    borderRadius: 999,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 10,
-  },
-  headerText: {
-    color: colors.textPrimary,
-    fontWeight: '600',
   },
   loader: {
     position: 'absolute',

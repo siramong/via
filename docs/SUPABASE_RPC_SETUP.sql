@@ -43,20 +43,20 @@ begin
   ),
   aggregated as (
     select
-      station_id,
-      station_name,
-      fuel_type,
-      avg(price) as avg_price,
-      avg(weighted_reputation) as avg_weight,
-      dist_meters,
+      latest_prices.station_id,
+      latest_prices.station_name,
+      latest_prices.fuel_type,
+      avg(latest_prices.price) as avg_price,
+      avg(latest_prices.weighted_reputation) as avg_weight,
+      latest_prices.dist_meters,
       case
-        when extract(epoch from now() - max(created_at)) / 3600 < 24 then 'fresh'
-        when extract(epoch from now() - max(created_at)) / 3600 < 72 then 'recent'
+        when extract(epoch from now() - max(latest_prices.created_at)) / 3600 < 24 then 'fresh'
+        when extract(epoch from now() - max(latest_prices.created_at)) / 3600 < 72 then 'recent'
         else 'stale'
       end as freshness
     from latest_prices
-    where rn = 1
-    group by station_id, station_name, fuel_type, dist_meters
+    where latest_prices.rn = 1
+    group by latest_prices.station_id, latest_prices.station_name, latest_prices.fuel_type, latest_prices.dist_meters
   )
   select
     aggregated.station_id,

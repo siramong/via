@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { AnimatedRegion, Marker, UrlTile } from 'react-native-maps';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 import { colors } from '../theme';
 import { useLocationStore } from '../state/locationStore';
 import type { StationMarker } from '../types';
@@ -19,46 +19,21 @@ const defaultRegion = {
 
 export const MapBackground = ({ interactive = false, markers = [] }: Props) => {
   const { coords } = useLocationStore();
-  const region = useRef(new AnimatedRegion(defaultRegion)).current;
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
-    if (coords) {
-      region.timing({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        latitudeDelta: 0.06,
-        longitudeDelta: 0.06,
-        duration: 250,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [coords, region]);
-
-  useEffect(() => {
-    let active = true;
-    const pulse = () => {
-      if (!active) return;
-      region.timing({
-        latitudeDelta: 0.058,
-        longitudeDelta: 0.058,
-        duration: 250,
-        useNativeDriver: false,
-      }).start(() => {
-        region.timing({
+    if (coords && mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
           latitudeDelta: 0.06,
           longitudeDelta: 0.06,
-          duration: 250,
-          useNativeDriver: false,
-        }).start(() => {
-          pulse();
-        });
-      });
-    };
-    pulse();
-    return () => {
-      active = false;
-    };
-  }, [region]);
+        },
+        250,
+      );
+    }
+  }, [coords]);
 
   const markerElements = useMemo(
     () =>
@@ -75,10 +50,10 @@ export const MapBackground = ({ interactive = false, markers = [] }: Props) => {
 
   return (
     <View style={styles.container} pointerEvents={interactive ? 'auto' : 'none'}>
-      <MapView.Animated
+      <MapView
+        ref={mapRef}
         style={StyleSheet.absoluteFill}
-        customMapStyle={[]}
-        region={region}
+        initialRegion={defaultRegion}
         rotateEnabled={false}
         scrollEnabled={interactive}
         zoomEnabled={interactive}
@@ -88,7 +63,7 @@ export const MapBackground = ({ interactive = false, markers = [] }: Props) => {
       >
         <UrlTile urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} />
         {markerElements}
-      </MapView.Animated>
+      </MapView>
       <View style={styles.overlay} />
     </View>
   );
@@ -96,11 +71,11 @@ export const MapBackground = ({ interactive = false, markers = [] }: Props) => {
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.background,
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(11, 15, 26, 0.6)',
   },
 });

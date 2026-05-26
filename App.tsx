@@ -71,7 +71,7 @@ export default function App() {
 
   return (
     <>
-      <StatusBar barStyle="light-content" />
+      <StatusBar />
       <NavigationContainer>
         {session ? <AppTabs /> : <AuthScreen />}
       </NavigationContainer>

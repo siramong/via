@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import type { Session } from '@supabase/supabase-js';
 import type { UserProfile } from '../types';
@@ -22,11 +21,10 @@ type UserState = {
   grantAccess: (delta: number, reason: string) => Promise<void>;
 };
 
-const buildRedirectUrl = () =>
-  AuthSession.makeRedirectUri({
-    scheme: 'via',
-    path: 'auth',
-  });
+const buildRedirectUrl = () => {
+  const scheme = 'via';
+  return `${scheme}://auth`;
+};
 
 export const useUserStore = create<UserState>((set, get) => ({
   session: null,
@@ -80,15 +78,21 @@ export const useUserStore = create<UserState>((set, get) => ({
       return;
     }
 
-    const result = await AuthSession.startAsync({ authUrl: data.url, returnUrl: redirectTo });
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
-    if (result.type === 'success' && 'code' in result.params) {
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
-        result.params.code as string,
-      );
-      if (exchangeError) {
-        set({ status: 'error', error: exchangeError.message });
+      if (result.type === 'success' && result.url) {
+        const urlParams = new URL(result.url).searchParams;
+        const code = urlParams.get('code');
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            set({ status: 'error', error: exchangeError.message });
+          }
+        }
       }
+    } catch (err) {
+      set({ status: 'error', error: (err as Error).message });
     }
 
     set({ status: 'ready' });

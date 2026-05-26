@@ -32,9 +32,11 @@ const extractFuelPricesFromText = (text: string): FuelPriceInput => {
 
   if (!prices.regular || !prices.premium || !prices.diesel) {
     const allMatches = lines
-      .flatMap((line) => line.match(priceRegex))
-      .filter(Boolean)
-      .map((match) => Number.parseFloat((match as RegExpMatchArray)[1]));
+      .flatMap((line) => {
+        const match = line.match(priceRegex);
+        return match ? [match[1]] : [];
+      })
+      .map((match) => Number.parseFloat(match));
 
     const fallback = allMatches.sort((a, b) => a - b);
     if (!prices.regular && fallback[0]) {

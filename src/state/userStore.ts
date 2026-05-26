@@ -81,22 +81,30 @@ export const useUserStore = create<UserState>((set, get) => ({
         return () => {};
       }
 
+      // First, try to get existing session
       const { data, error } = await supabase.auth.getSession();
       if (error) {
+        console.warn('[Auth] getSession error:', error.message);
         set({ status: 'error', error: error.message });
       } else {
-        set({ session: data.session, status: 'ready' });
         if (data.session) {
+          console.log('[Auth] Existing session found');
+          set({ session: data.session, status: 'ready' });
           const profile = await ensureUserProfile(data.session);
           set({ profile });
+        } else {
+          console.log('[Auth] No existing session');
+          set({ status: 'ready' });
         }
       }
 
-      const { data: authData } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      // Set up listener for auth state changes
+      const { data: authData } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+        console.log('[Auth] State changed:', event, !!nextSession);
         set({ session: nextSession });
         if (nextSession) {
           const profile = await ensureUserProfile(nextSession);
-          set({ profile });
+          set({ profile, status: 'ready' });
         } else {
           set({ profile: null });
         }
@@ -106,7 +114,9 @@ export const useUserStore = create<UserState>((set, get) => ({
         authData.subscription.unsubscribe();
       };
     } catch (err) {
-      set({ status: 'error', error: (err as Error).message });
+      const errorMsg = (err as Error).message;
+      console.error('[Auth] Bootstrap error:', errorMsg);
+      set({ status: 'error', error: errorMsg });
       return () => {};
     }
   },
@@ -118,6 +128,8 @@ export const useUserStore = create<UserState>((set, get) => ({
 
     set({ status: 'loading', error: null });
     const redirectTo = buildRedirectUrl();
+    console.log('[OAuth] Starting Google sign-in with redirectTo:', redirectTo);
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -130,20 +142,27 @@ export const useUserStore = create<UserState>((set, get) => ({
     });
 
     if (error || !data?.url) {
-      set({ status: 'error', error: error?.message ?? 'Unable to start Google sign-in.' });
+      const errorMsg = error?.message ?? 'Unable to start Google sign-in.';
+      console.error('[OAuth] signInWithOAuth failed:', errorMsg);
+      set({ status: 'error', error: errorMsg });
       return;
     }
 
+    console.log('[OAuth] Opening auth session...');
+    
     try {
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      console.log('[OAuth] WebBrowser result type:', result.type);
 
       if (result.type === 'success' && result.url) {
+        console.log('[OAuth] Got success with URL');
         // Parse the redirect URL - Supabase returns token in hash fragment
         const urlObject = new URL(result.url);
         const hashParams = new URLSearchParams(urlObject.hash.substring(1));
         const accessToken = hashParams.get('access_token');
 
         if (accessToken) {
+          console.log('[OAuth] Found access token in hash');
           // Create a session from the access token
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -151,28 +170,52 @@ export const useUserStore = create<UserState>((set, get) => ({
           });
 
           if (sessionError || !sessionData.session) {
-            set({ status: 'error', error: sessionError?.message ?? 'Failed to establish session' });
+            const errorMsg = sessionError?.message ?? 'Failed to establish session';
+            console.error('[OAuth] setSession failed:', errorMsg);
+            set({ status: 'error', error: errorMsg });
           } else {
+            console.log('[OAuth] Session established successfully');
             set({ session: sessionData.session, status: 'ready' });
             const profile = await ensureUserProfile(sessionData.session);
             set({ profile });
           }
         } else {
+          console.log('[OAuth] No token in hash, checking getSession...');
           // Fallback: try to get session from Supabase (onAuthStateChange might have handled it)
           const { data: sessionData } = await supabase.auth.getSession();
           if (sessionData.session) {
+            console.log('[OAuth] Session found via getSession');
             set({ session: sessionData.session, status: 'ready' });
             const profile = await ensureUserProfile(sessionData.session);
             set({ profile });
           } else {
+            console.warn('[OAuth] No session found in redirect');
             set({ status: 'error', error: 'No session found in redirect' });
           }
         }
       } else if (result.type === 'dismiss') {
+        console.log('[OAuth] User dismissed auth');
         set({ status: 'error', error: 'Sign-in cancelled' });
+      } else {
+        console.log('[OAuth] Auth session closed, waiting for state change...');
+        // On web, after WebBrowser closes, check if Supabase already processed the auth
+        // Wait a moment for onAuthStateChange to fire
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          console.log('[OAuth] Session found after waiting');
+          set({ session: sessionData.session, status: 'ready' });
+          const profile = await ensureUserProfile(sessionData.session);
+          set({ profile });
+        } else {
+          console.warn('[OAuth] No session after auth flow');
+          set({ status: 'error', error: 'Authentication failed or was cancelled' });
+        }
       }
     } catch (err) {
-      set({ status: 'error', error: (err as Error).message });
+      const errorMsg = (err as Error).message;
+      console.error('[OAuth] Exception:', errorMsg);
+      set({ status: 'error', error: errorMsg });
     }
   },
   signOut: async () => {

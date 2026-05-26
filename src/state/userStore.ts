@@ -133,20 +133,42 @@ export const useUserStore = create<UserState>((set, get) => ({
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
       if (result.type === 'success' && result.url) {
-        const urlParams = new URL(result.url).searchParams;
-        const code = urlParams.get('code');
-        if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError) {
-            set({ status: 'error', error: exchangeError.message });
+        // Parse the redirect URL - Supabase returns token in hash fragment
+        const urlObject = new URL(result.url);
+        const hashParams = new URLSearchParams(urlObject.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+
+        if (accessToken) {
+          // Create a session from the access token
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: hashParams.get('refresh_token') || '',
+          });
+
+          if (sessionError || !sessionData.session) {
+            set({ status: 'error', error: sessionError?.message ?? 'Failed to establish session' });
+          } else {
+            set({ session: sessionData.session, status: 'ready' });
+            const profile = await ensureUserProfile(sessionData.session);
+            set({ profile });
+          }
+        } else {
+          // Fallback: try to get session from Supabase (onAuthStateChange might have handled it)
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData.session) {
+            set({ session: sessionData.session, status: 'ready' });
+            const profile = await ensureUserProfile(sessionData.session);
+            set({ profile });
+          } else {
+            set({ status: 'error', error: 'No session found in redirect' });
           }
         }
+      } else if (result.type === 'dismiss') {
+        set({ status: 'error', error: 'Sign-in cancelled' });
       }
     } catch (err) {
       set({ status: 'error', error: (err as Error).message });
     }
-
-    set({ status: 'ready' });
   },
   signOut: async () => {
     if (isSupabaseConfigured()) {

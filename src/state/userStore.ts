@@ -1,15 +1,11 @@
 import { create } from 'zustand';
-import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import type { Session } from '@supabase/supabase-js';
 import type { UserProfile } from '../types';
 import { ensureUserProfile, refreshUserProfile, supabase, isSupabaseConfigured } from '../services/supabase';
 import { consumeAccess as consumeAccessRpc, grantAccess as grantAccessRpc } from '../services/pricing';
 
-// Only use WebBrowser on native platforms
-if (Platform.OS !== 'web') {
-  WebBrowser.maybeCompleteAuthSession();
-}
+WebBrowser.maybeCompleteAuthSession();
 
 type UserState = {
   session: Session | null;
@@ -26,11 +22,7 @@ type UserState = {
 };
 
 const buildRedirectUrl = () => {
-  // For web: redirect back to current origin
-  // For native: use custom scheme
-  if (typeof window !== 'undefined') {
-    return `${window.location.origin}`;
-  }
+  // Mobile only: use custom scheme
   const scheme = 'via';
   return `${scheme}://auth`;
 };
@@ -153,16 +145,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     }
 
     console.log('[OAuth] OAuth URL:', data.url);
-
-    // On web, redirect directly; on native, use WebBrowser
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      console.log('[OAuth] Redirecting to Google on web...');
-      window.location.href = data.url;
-      return;
-    }
-
-    // Native platform flow
-    console.log('[OAuth] Opening auth session on native...');
+    console.log('[OAuth] Opening auth session on mobile...');
     
     try {
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
@@ -212,7 +195,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         set({ status: 'error', error: 'Sign-in cancelled' });
       } else {
         console.log('[OAuth] Auth session closed, waiting for state change...');
-        // On native, after WebBrowser closes, check if Supabase already processed the auth
+        // After WebBrowser closes, check if Supabase already processed the auth
         await new Promise(resolve => setTimeout(resolve, 500));
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session) {

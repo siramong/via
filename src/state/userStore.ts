@@ -1,11 +1,15 @@
 import { create } from 'zustand';
+import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import type { Session } from '@supabase/supabase-js';
 import type { UserProfile } from '../types';
 import { ensureUserProfile, refreshUserProfile, supabase, isSupabaseConfigured } from '../services/supabase';
 import { consumeAccess as consumeAccessRpc, grantAccess as grantAccessRpc } from '../services/pricing';
 
-WebBrowser.maybeCompleteAuthSession();
+// Only use WebBrowser on native platforms
+if (Platform.OS !== 'web') {
+  WebBrowser.maybeCompleteAuthSession();
+}
 
 type UserState = {
   session: Session | null;
@@ -148,7 +152,17 @@ export const useUserStore = create<UserState>((set, get) => ({
       return;
     }
 
-    console.log('[OAuth] Opening auth session...');
+    console.log('[OAuth] OAuth URL:', data.url);
+
+    // On web, redirect directly; on native, use WebBrowser
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      console.log('[OAuth] Redirecting to Google on web...');
+      window.location.href = data.url;
+      return;
+    }
+
+    // Native platform flow
+    console.log('[OAuth] Opening auth session on native...');
     
     try {
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
@@ -198,8 +212,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         set({ status: 'error', error: 'Sign-in cancelled' });
       } else {
         console.log('[OAuth] Auth session closed, waiting for state change...');
-        // On web, after WebBrowser closes, check if Supabase already processed the auth
-        // Wait a moment for onAuthStateChange to fire
+        // On native, after WebBrowser closes, check if Supabase already processed the auth
         await new Promise(resolve => setTimeout(resolve, 500));
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session) {

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as WebBrowser from 'expo-web-browser';
 import type { Session } from '@supabase/supabase-js';
 import type { UserProfile } from '../types';
-import { ensureUserProfile, refreshUserProfile, supabase } from '../services/supabase';
+import { ensureUserProfile, refreshUserProfile, supabase, isSupabaseConfigured } from '../services/supabase';
 import { consumeAccess as consumeAccessRpc, grantAccess as grantAccessRpc } from '../services/pricing';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -11,7 +11,7 @@ type UserState = {
   session: Session | null;
   profile: UserProfile | null;
   status: 'idle' | 'loading' | 'ready' | 'error';
-  error: string | null;
+  error: string | null | undefined;
   bootstrap: () => Promise<() => void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -26,6 +26,40 @@ const buildRedirectUrl = () => {
   return `${scheme}://auth`;
 };
 
+// Mock session for testing without Supabase
+const mockSession: Session = {
+  user: {
+    id: 'test-user-id',
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: 'test@via.local',
+    email_confirmed_at: new Date().toISOString(),
+    phone: undefined,
+    confirmed_at: new Date().toISOString(),
+    last_sign_in_at: new Date().toISOString(),
+    app_metadata: {},
+    user_metadata: {
+      full_name: 'Test User',
+    },
+    identities: [],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  access_token: 'mock-token',
+  token_type: 'bearer',
+  expires_in: 3600,
+  refresh_token: 'mock-refresh',
+  expires_at: Date.now() + 3600000,
+};
+
+const mockProfile: UserProfile = {
+  id: 'test-user-id',
+  auth_id: 'test-user-id',
+  display_name: 'Test User',
+  reputation: 42,
+  access_remaining: 3,
+};
+
 export const useUserStore = create<UserState>((set, get) => ({
   session: null,
   profile: null,
@@ -34,32 +68,49 @@ export const useUserStore = create<UserState>((set, get) => ({
   setSession: (session) => set({ session }),
   bootstrap: async () => {
     set({ status: 'loading', error: null });
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      set({ status: 'error', error: error.message });
-    } else {
-      set({ session: data.session, status: 'ready' });
-      if (data.session) {
-        const profile = await ensureUserProfile(data.session);
-        set({ profile });
-      }
-    }
 
-    const { data: authData } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      set({ session: nextSession });
-      if (nextSession) {
-        const profile = await ensureUserProfile(nextSession);
-        set({ profile });
+    try {
+      if (!isSupabaseConfigured()) {
+        // Use mock session for development without Supabase
+        set({ session: mockSession, profile: mockProfile, status: 'ready' });
+        return () => {};
+      }
+
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        set({ status: 'error', error: error.message });
       } else {
-        set({ profile: null });
+        set({ session: data.session, status: 'ready' });
+        if (data.session) {
+          const profile = await ensureUserProfile(data.session);
+          set({ profile });
+        }
       }
-    });
 
-    return () => {
-      authData.subscription.unsubscribe();
-    };
+      const { data: authData } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+        set({ session: nextSession });
+        if (nextSession) {
+          const profile = await ensureUserProfile(nextSession);
+          set({ profile });
+        } else {
+          set({ profile: null });
+        }
+      });
+
+      return () => {
+        authData.subscription.unsubscribe();
+      };
+    } catch (err) {
+      set({ status: 'error', error: (err as Error).message });
+      return () => {};
+    }
   },
   signInWithGoogle: async () => {
+    if (!isSupabaseConfigured()) {
+      set({ session: mockSession, profile: mockProfile, status: 'ready' });
+      return;
+    }
+
     set({ status: 'loading', error: null });
     const redirectTo = buildRedirectUrl();
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -98,31 +149,49 @@ export const useUserStore = create<UserState>((set, get) => ({
     set({ status: 'ready' });
   },
   signOut: async () => {
-    await supabase.auth.signOut();
+    if (isSupabaseConfigured()) {
+      await supabase.auth.signOut();
+    }
     set({ session: null, profile: null });
   },
   refreshProfile: async () => {
     const session = get().session;
     if (!session) return;
-    const profile = await refreshUserProfile(session.user.id);
-    set({ profile });
+    if (isSupabaseConfigured()) {
+      const profile = await refreshUserProfile(session.user.id);
+      set({ profile });
+    }
   },
   consumeAccess: async () => {
     const session = get().session;
     if (!session) return;
-    const remaining = await consumeAccessRpc(session.user.id);
-    const profile = get().profile;
-    if (profile) {
-      set({ profile: { ...profile, access_remaining: remaining } });
+    if (isSupabaseConfigured()) {
+      const remaining = await consumeAccessRpc(session.user.id);
+      const profile = get().profile;
+      if (profile) {
+        set({ profile: { ...profile, access_remaining: remaining } });
+      }
+    } else {
+      const profile = get().profile;
+      if (profile && profile.access_remaining > 0) {
+        set({ profile: { ...profile, access_remaining: profile.access_remaining - 1 } });
+      }
     }
   },
   grantAccess: async (delta: number, reason: string) => {
     const session = get().session;
     if (!session) return;
-    const remaining = await grantAccessRpc(session.user.id, delta, reason);
-    const profile = get().profile;
-    if (profile) {
-      set({ profile: { ...profile, access_remaining: remaining } });
+    if (isSupabaseConfigured()) {
+      const remaining = await grantAccessRpc(session.user.id, delta, reason);
+      const profile = get().profile;
+      if (profile) {
+        set({ profile: { ...profile, access_remaining: remaining } });
+      }
+    } else {
+      const profile = get().profile;
+      if (profile) {
+        set({ profile: { ...profile, access_remaining: profile.access_remaining + delta } });
+      }
     }
   },
 }));

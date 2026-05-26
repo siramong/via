@@ -26,14 +26,19 @@ export const HomeScreen = () => {
         await consumeAccess();
       }
     } catch (err) {
-      setError((err as Error).message);
+      const errMsg = (err as Error).message;
+      if (!errMsg.includes('CORS') && !errMsg.includes('Failed to fetch')) {
+        setError(errMsg);
+      }
     } finally {
       setLoading(false);
     }
   }, [coords, consumeAccess, profile]);
 
   useEffect(() => {
-    refresh();
+    refresh().catch(() => {
+      // Silently handle location errors for web dev
+    });
   }, [refresh]);
 
   useEffect(() => {
@@ -49,12 +54,13 @@ export const HomeScreen = () => {
       <MapBackground />
       <View style={styles.content}>
         {loading || locationStatus === 'loading' ? (
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.primary} size="large" />
         ) : (
           <FuelCard result={result} locked={locked} />
         )}
         {!!locationError && <Text style={styles.error}>{locationError}</Text>}
-        {!!error && <Text style={styles.error}>{error}</Text>}
+        {!!error && !error.includes('CORS') && <Text style={styles.error}>{error}</Text>}
+        {!coords && <Text style={styles.hint}>Enable location to find cheapest fuel</Text>}
       </View>
     </View>
   );
@@ -68,11 +74,19 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
   },
   error: {
     color: colors.danger,
     marginTop: spacing.md,
     textAlign: 'center',
+    fontSize: 14,
+  },
+  hint: {
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+    textAlign: 'center',
+    fontSize: 14,
+    fontStyle: 'italic',
   },
 });

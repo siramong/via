@@ -12,7 +12,9 @@ export const MapScreen = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    refresh();
+    refresh().catch(() => {
+      // Silently handle on web
+    });
   }, [refresh]);
 
   useEffect(() => {
@@ -20,6 +22,9 @@ export const MapScreen = () => {
     setLoading(true);
     getNearbyStations(coords)
       .then(setMarkers)
+      .catch(() => {
+        setMarkers([]);
+      })
       .finally(() => setLoading(false));
   }, [coords]);
 
@@ -28,7 +33,7 @@ export const MapScreen = () => {
       <MapBackground interactive markers={markers} />
       {(loading || status === 'loading') && (
         <View style={styles.loader}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       )}
     </View>

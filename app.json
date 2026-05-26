@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "VIA",
+    "slug": "via",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "via",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0F1A"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow VIA to access your location to find nearby fuel stations."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow VIA to access your photos.",
+          "cameraPermission": "Allow VIA to access your camera to capture fuel pump displays."
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.siramong.via",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "VIA needs access to your location to find the cheapest fuel nearby.",
+        "NSCameraUsageDescription": "VIA needs camera access to capture fuel pump displays.",
+        "NSPhotoLibraryUsageDescription": "VIA needs access to your photos to submit fuel price reports."
+      }
+    },
+    "android": {
+      "package": "com.siramong.via",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0F1A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundleUrl": "https://cdn.jsdelivr.net/npm/@react-native-web@0.19"
+    }
+  }
+}

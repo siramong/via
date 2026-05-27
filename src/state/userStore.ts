@@ -17,6 +17,7 @@ type UserState = {
   refreshProfile: () => Promise<void>;
   consumeAccess: () => Promise<void>;
   grantAccess: (delta: number, reason: string) => Promise<void>;
+  updateDisplayName: (name: string) => Promise<void>;
 };
 
 const buildRedirectUrl = () => {
@@ -58,6 +59,7 @@ const mockProfile: UserProfile = {
   display_name: 'Test User',
   reputation: 42,
   access_remaining: 3,
+  created_at: new Date().toISOString(),
 };
 
 export const useUserStore = create<UserState>((set, get) => ({
@@ -217,5 +219,14 @@ export const useUserStore = create<UserState>((set, get) => ({
         set({ profile: { ...profile, access_remaining: profile.access_remaining + delta } });
       }
     }
+  },
+  updateDisplayName: async (name: string) => {
+    const { profile, session } = get();
+    if (!profile || !session) return;
+    if (isSupabaseConfigured()) {
+      const { updateProfileName } = await import('../services/supabase');
+      await updateProfileName(profile.id, name);
+    }
+    set({ profile: { ...profile, display_name: name } });
   },
 }));

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import type { Session } from '@supabase/supabase-js';
-import type { UserProfile } from '../types';
+import type { UserProfile, UserReport } from '../types';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
@@ -31,6 +31,7 @@ export const ensureUserProfile = async (session: Session): Promise<UserProfile> 
       display_name: session.user.user_metadata?.full_name ?? 'Test User',
       reputation: 0,
       access_remaining: 3,
+      created_at: session.user.created_at,
     };
   }
 
@@ -75,6 +76,7 @@ export const refreshUserProfile = async (authId: string): Promise<UserProfile> =
       display_name: 'Test User',
       reputation: 0,
       access_remaining: 3,
+      created_at: new Date().toISOString(),
     };
   }
 
@@ -83,4 +85,30 @@ export const refreshUserProfile = async (authId: string): Promise<UserProfile> =
     throw error;
   }
   return data as UserProfile;
+};
+
+export const updateProfileName = async (profileId: string, displayName: string): Promise<void> => {
+  if (!isSupabaseConfigured()) return;
+  const { error } = await supabase.from('users').update({ display_name: displayName }).eq('id', profileId);
+  if (error) throw error;
+};
+
+export const getUserReports = async (profileId: string, limit = 10): Promise<UserReport[]> => {
+  if (!isSupabaseConfigured()) return [];
+  const { data, error } = await supabase
+    .from('reports')
+    .select('id, station_id, station:stations(name), ocr_json, status, created_at')
+    .eq('user_id', profileId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    station_name: r.station?.name ?? null,
+    prices: r.ocr_json ?? {},
+    status: r.status,
+    created_at: r.created_at,
+  }));
 };

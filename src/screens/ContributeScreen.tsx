@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,24 +9,42 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { runOcrWithRetries } from '../services/ocr';
+import { getNearbyStations } from '../services/pricing';
 import { PriceSelector } from '../components/PriceSelector';
+import { PhotoPreview } from '../components/PhotoPreview';
+import { StationSelector } from '../components/StationSelector';
 import { MapBackground } from '../components/MapView';
-import { colors, radius, spacing } from '../theme';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { colors, radius, spacing, typography } from '../theme';
 import { supabase } from '../services/supabase';
 import { useUserStore } from '../state/userStore';
-import type { FuelType, FuelPriceInput } from '../types';
+import { useLocationStore } from '../state/locationStore';
+import { toast } from '../state/toastStore';
+import type { FuelType, FuelPriceInput, StationMarker } from '../types';
 
 export const ContributeScreen = () => {
   const { profile, grantAccess, session } = useUserStore();
+  const { coords } = useLocationStore();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [prices, setPrices] = useState<FuelPriceInput>({});
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'camera' | 'ocr' | 'review'>('camera');
+  const [step, setStep] = useState<'camera' | 'review' | 'confirm'>('camera');
   const [error, setError] = useState<string | null>(null);
+  const [stations, setStations] = useState<StationMarker[]>([]);
+  const [selectedStation, setSelectedStation] = useState<StationMarker | null>(null);
+  const [showStationPicker, setShowStationPicker] = useState(false);
+  const [ocrDone, setOcrDone] = useState(false);
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(14)).current;
+
+  useEffect(() => {
+    if (coords) {
+      getNearbyStations(coords).then(setStations).catch(() => {});
+    }
+  }, [coords]);
 
   useEffect(() => {
     opacity.setValue(0);
@@ -48,9 +64,11 @@ export const ContributeScreen = () => {
         quality: 0.8,
       });
       if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
-        setStep('ocr');
-        await runOcr(result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        setImageUri(uri);
+        setOcrDone(false);
+        setStep('review');
+        await runOcr(uri);
       }
     } catch (err) {
       setError((err as Error).message);
@@ -62,21 +80,21 @@ export const ContributeScreen = () => {
   const runOcr = useCallback(async (uri: string) => {
     setLoading(true);
     try {
-      const { output, manualFallback } = await runOcrWithRetries(uri);
+      const { output } = await runOcrWithRetries(uri);
       setPrices(output.prices);
-      if (manualFallback) {
-        Alert.alert('OCR', 'Confidence low. Please adjust prices manually.');
+      if (Object.keys(output.prices).length === 0) {
+        toast.info('No prices detected. Enter them manually.');
       }
-      setStep('review');
     } catch (err) {
-      setError((err as Error).message);
+      toast.error('OCR failed. Enter prices manually.');
     } finally {
+      setOcrDone(true);
       setLoading(false);
     }
   }, []);
 
   const updatePrice = (fuelType: FuelType, value: number) => {
-    setPrices((prev) => ({ ...prev, [fuelType]: value }));
+    setPrices((prev: FuelPriceInput) => ({ ...prev, [fuelType]: value }));
   };
 
   const submitReport = useCallback(async () => {
@@ -99,6 +117,7 @@ export const ContributeScreen = () => {
         user_id: profile.id,
         image_url: uploadData?.path ?? filename,
         ocr_json: prices,
+        station_id: selectedStation?.stationId ?? null,
         status: 'pending',
       });
 
@@ -106,16 +125,28 @@ export const ContributeScreen = () => {
 
       await grantAccess(2, 'valid_report');
 
-      Alert.alert('Success', 'Report submitted! You earned +2 access.');
+      toast.success('Report submitted! You earned +2 access.');
       setImageUri(null);
       setPrices({});
+      setSelectedStation(null);
       setStep('camera');
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [imageUri, session, profile, prices, grantAccess]);
+  }, [imageUri, session, profile, prices, selectedStation, grantAccess]);
+
+  const resetAll = useCallback(() => {
+    setStep('camera');
+    setImageUri(null);
+    setPrices({});
+    setSelectedStation(null);
+    setError(null);
+  }, []);
+
+  const hasPrices = Object.values(prices).some((v) => typeof v === 'number' && v > 0);
+  const allFuelTypes: FuelType[] = ['regular', 'premium', 'diesel'];
 
   return (
     <View style={styles.container}>
@@ -132,79 +163,163 @@ export const ContributeScreen = () => {
         </View>
 
         {step === 'camera' && (
-          <Animated.View style={[styles.panel, { opacity, transform: [{ translateY }] }]}>
-            <View style={styles.panelHeader}>
-              <Ionicons name="camera" size={18} color={colors.primary} />
-              <Text style={styles.panelTitle}>Capture the pump display</Text>
-            </View>
-            <Text style={styles.panelBody}>
-              A clear photo improves OCR accuracy and speeds up the review.
-            </Text>
-            {!!error && <Text style={styles.error}>{error}</Text>}
-            <Pressable style={styles.primaryButton} onPress={pickImage} disabled={loading}>
-              <LinearGradient colors={[colors.primary, colors.accent]} style={styles.primaryButtonFill}>
-                {loading ? (
-                  <ActivityIndicator color={colors.background} />
-                ) : (
-                  <>
-                    <Ionicons name="camera" size={18} color={colors.background} />
-                    <Text style={styles.primaryButtonText}>Open Camera</Text>
-                  </>
-                )}
-              </LinearGradient>
-            </Pressable>
+          <Animated.View style={[{ opacity, transform: [{ translateY }] }]}>
+            <Card variant="glass">
+              <View style={styles.sectionHeader}>
+                <Ionicons name="camera" size={18} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Capture the pump display</Text>
+              </View>
+              <Text style={styles.bodyText}>
+                A clear photo improves OCR accuracy and speeds up the review.
+              </Text>
+              {!!error && <Text style={styles.error}>{error}</Text>}
+              <Button
+                title="Open Camera"
+                icon="camera"
+                variant="primary"
+                loading={loading}
+                onPress={pickImage}
+                size="lg"
+                style={{ marginTop: spacing.lg }}
+              />
+            </Card>
           </Animated.View>
         )}
 
         {step === 'review' && imageUri && (
-          <Animated.View style={[styles.panel, { opacity, transform: [{ translateY }] }]}>
-            <View style={styles.panelHeader}>
-              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-              <Text style={styles.panelTitle}>Verify prices</Text>
-            </View>
-            <Text style={styles.panelBody}>Adjust any incorrect values below.</Text>
+          <Animated.View style={[{ opacity, transform: [{ translateY }] }]}>
+            <PhotoPreview uri={imageUri} onRetake={resetAll} />
 
-            <View style={styles.prices}>
-              {(['regular', 'premium', 'diesel'] as const).map((fuelType) => (
-                <PriceSelector
-                  key={fuelType}
-                  label={fuelType}
-                  value={prices[fuelType] ?? 0}
-                  onChange={(v) => updatePrice(fuelType, v)}
-                />
-              ))}
-            </View>
+            <Card variant="glass" style={{ marginTop: spacing.md }}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="pricetags" size={18} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Prices</Text>
+              </View>
+              <Text style={styles.bodyText}>
+                {ocrDone ? 'Adjust any incorrect values below.' : 'Running OCR...'}
+              </Text>
+              {loading && !ocrDone ? (
+                <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
+              ) : (
+                <View style={styles.prices}>
+                  {allFuelTypes.map((fuelType) => (
+                    <PriceSelector
+                      key={fuelType}
+                      label={fuelType}
+                      value={prices[fuelType] ?? 0}
+                      onChange={(v) => updatePrice(fuelType, v)}
+                    />
+                  ))}
+                </View>
+              )}
+            </Card>
+
+            <Card variant="glass" style={{ marginTop: spacing.md }}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="location" size={18} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Station</Text>
+              </View>
+              <Text style={styles.bodyText}>
+                Select which station this price belongs to.
+              </Text>
+              <Button
+                title={selectedStation?.name ?? 'Choose station...'}
+                icon={selectedStation ? 'checkmark-circle' : 'ellipse-outline'}
+                variant="secondary"
+                size="sm"
+                onPress={() => setShowStationPicker(true)}
+                style={{ marginTop: spacing.md }}
+              />
+            </Card>
 
             {!!error && <Text style={styles.error}>{error}</Text>}
 
             <View style={styles.actions}>
-              <Pressable
-                style={[styles.button, styles.secondaryButton]}
-                onPress={() => {
-                  setStep('camera');
-                  setImageUri(null);
-                  setPrices({});
-                }}
-              >
-                <Ionicons name="refresh" size={16} color={colors.textPrimary} />
-                <Text style={styles.secondaryButtonText}>Retake</Text>
-              </Pressable>
-              <Pressable style={styles.primaryButton} onPress={submitReport} disabled={loading}>
-                <LinearGradient colors={[colors.primary, colors.accent]} style={styles.primaryButtonFill}>
-                  {loading ? (
-                    <ActivityIndicator color={colors.background} />
-                  ) : (
-                    <>
-                      <Ionicons name="cloud-upload" size={18} color={colors.background} />
-                      <Text style={styles.primaryButtonText}>Submit</Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </Pressable>
+              <Button title="Back" variant="secondary" icon="arrow-back" onPress={resetAll} size="md" />
+              <Button
+                title="Continue"
+                variant="primary"
+                icon="arrow-forward"
+                disabled={!hasPrices}
+                onPress={() => setStep('confirm')}
+                size="md"
+              />
             </View>
           </Animated.View>
         )}
+
+        {step === 'confirm' && imageUri && (
+          <Animated.View style={[{ opacity, transform: [{ translateY }] }]}>
+            <Card variant="glass">
+              <View style={styles.sectionHeader}>
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                <Text style={styles.sectionTitle}>Confirm report</Text>
+              </View>
+
+              <View style={styles.confirmPhoto}>
+                <Ionicons name="image" size={16} color={colors.textMuted} />
+                <Text style={styles.confirmPhotoText}>Photo captured</Text>
+              </View>
+
+              {selectedStation && (
+                <View style={styles.confirmRow}>
+                  <Ionicons name="location" size={16} color={colors.textSecondary} />
+                  <Text style={styles.confirmLabel}>Station:</Text>
+                  <Text style={styles.confirmValue} numberOfLines={1}>{selectedStation.name}</Text>
+                </View>
+              )}
+
+              <View style={styles.confirmPrices}>
+                <Text style={styles.confirmPricesLabel}>Prices</Text>
+                <View style={styles.confirmPricesGrid}>
+                  {allFuelTypes.map((ft) => {
+                    const v = prices[ft];
+                    if (v == null || v === 0) return null;
+                    return (
+                      <View key={ft} style={styles.confirmPriceItem}>
+                        <Badge variant="info" label={ft} />
+                        <Text style={styles.confirmPriceValue}>${v.toFixed(2)}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {!!error && <Text style={styles.error}>{error}</Text>}
+
+              <View style={styles.actions}>
+                <Button
+                  title="Edit"
+                  variant="secondary"
+                  icon="arrow-back"
+                  onPress={() => setStep('review')}
+                  size="md"
+                />
+                <Button
+                  title="Submit"
+                  variant="primary"
+                  icon="cloud-upload"
+                  loading={loading}
+                  onPress={submitReport}
+                  size="md"
+                />
+              </View>
+            </Card>
+          </Animated.View>
+        )}
       </ScrollView>
+
+      {showStationPicker && (
+        <StationSelector
+          stations={stations}
+          selectedId={selectedStation?.stationId ?? null}
+          onSelect={(s) => {
+            setSelectedStation(s);
+            setShowStationPicker(false);
+          }}
+          onClose={() => setShowStationPicker(false)}
+        />
+      )}
     </View>
   );
 };
@@ -236,81 +351,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
+    ...typography.h3,
     color: colors.textPrimary,
-    fontSize: 22,
-    fontWeight: '700',
   },
   subtitle: {
+    ...typography.body,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
-  panel: {
-    backgroundColor: colors.glass,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
-  },
-  panelHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  panelTitle: {
+  sectionTitle: {
+    ...typography.h4,
     color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
   },
-  panelBody: {
+  bodyText: {
+    ...typography.body,
     color: colors.textSecondary,
-    marginTop: spacing.sm,
-    lineHeight: 20,
   },
   prices: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     gap: spacing.md,
-  },
-  primaryButton: {
-    marginTop: spacing.lg,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    flex: 1,
-  },
-  primaryButtonFill: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.lg,
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  primaryButtonText: {
-    color: colors.background,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  secondaryButton: {
-    backgroundColor: 'rgba(16, 22, 40, 0.85)',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  secondaryButtonText: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-  button: {
-    borderRadius: radius.lg,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    flex: 1,
   },
   actions: {
     marginTop: spacing.lg,
@@ -320,5 +385,58 @@ const styles = StyleSheet.create({
   error: {
     color: colors.danger,
     marginTop: spacing.md,
+  },
+  confirmPhoto: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface1,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginTop: spacing.md,
+  },
+  confirmPhotoText: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  confirmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  confirmLabel: {
+    ...typography.bodyBold,
+    color: colors.textSecondary,
+  },
+  confirmValue: {
+    ...typography.body,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  confirmPrices: {
+    marginTop: spacing.md,
+    backgroundColor: colors.surface1,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  confirmPricesLabel: {
+    ...typography.label,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  confirmPricesGrid: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    flexWrap: 'wrap',
+  },
+  confirmPriceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  confirmPriceValue: {
+    ...typography.h4,
+    color: colors.textPrimary,
   },
 });

@@ -32,4 +32,13 @@ export type UserProfile = {
   display_name: string | null;
   reputation: number;
   access_remaining: number;
+  created_at: string;
+};
+
+export type UserReport = {
+  id: string;
+  station_name: string | null;
+  prices: FuelPriceInput;
+  status: string;
+  created_at: string;
 };

@@ -42,7 +42,7 @@ const AppTabs = () => {
           position: 'absolute',
           left: 28,
           right: 28,
-          bottom: insets.bottom + 48,
+          bottom: insets.bottom + 10,
           height: 56,
           borderRadius: 28,
           backgroundColor: colors.card,

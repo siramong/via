@@ -36,14 +36,14 @@ export const PriceSelector = ({ label, value, step = 0.01, onChange }: Props) =>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.controls}>
         <Pressable style={styles.button} onPress={decrement}>
-          <Ionicons name="remove" size={22} color={colors.background} />
+          <Ionicons name="remove" size={18} color={colors.textSecondary} />
         </Pressable>
         <View style={styles.valueWrap}>
           <Text style={styles.currency}>$</Text>
           <Text style={styles.value}>{value.toFixed(2)}</Text>
         </View>
         <Pressable style={styles.button} onPress={increment}>
-          <Ionicons name="add" size={22} color={colors.background} />
+          <Ionicons name="add" size={18} color={colors.textSecondary} />
         </Pressable>
       </View>
     </Animated.View>
@@ -53,15 +53,14 @@ export const PriceSelector = ({ label, value, step = 0.01, onChange }: Props) =>
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.surface1,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
   label: {
     ...typography.label,
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     textTransform: 'capitalize',
   },
   controls: {
@@ -71,10 +70,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   button: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -85,12 +84,12 @@ const styles = StyleSheet.create({
   },
   currency: {
     color: colors.textSecondary,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
   },
   value: {
     color: colors.textPrimary,
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '800',
     letterSpacing: -0.5,
   },

@@ -238,7 +238,7 @@ export const ContributeScreen = () => {
             {!!error && <Text style={styles.error}>{error}</Text>}
 
             <View style={styles.actions}>
-              <Button title="Back" variant="secondary" icon="arrow-back" onPress={resetAll} size="md" />
+              <Button title="Back" variant="secondary" icon="arrow-back" onPress={resetAll} size="md" style={{ flex: 1 }} />
               <Button
                 title="Continue"
                 variant="primary"
@@ -246,6 +246,7 @@ export const ContributeScreen = () => {
                 disabled={!hasPrices}
                 onPress={() => setStep('confirm')}
                 size="md"
+                style={{ flex: 1 }}
               />
             </View>
           </Animated.View>
@@ -297,6 +298,7 @@ export const ContributeScreen = () => {
                   icon="arrow-back"
                   onPress={() => setStep('review')}
                   size="md"
+                  style={{ flex: 1 }}
                 />
                 <Button
                   title="Submit"
@@ -305,6 +307,7 @@ export const ContributeScreen = () => {
                   loading={loading}
                   onPress={submitReport}
                   size="md"
+                  style={{ flex: 1 }}
                 />
               </View>
             </Card>
@@ -333,7 +336,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
   },
   header: {

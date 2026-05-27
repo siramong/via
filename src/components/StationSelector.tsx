@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import type { StationMarker } from '../types';
@@ -29,6 +30,7 @@ const formatDistance = (meters: number) => {
 };
 
 export const StationSelector = ({ stations, selectedId, onSelect, onClose }: Props) => {
+  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -51,7 +53,7 @@ export const StationSelector = ({ stations, selectedId, onSelect, onClose }: Pro
       <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
-      <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+      <Animated.View style={[styles.sheet, { transform: [{ translateY }], paddingBottom: insets.bottom + spacing.lg }]}>
         <View style={styles.handle} />
         <Text style={styles.title}>Select station</Text>
 

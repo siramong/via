@@ -13,6 +13,7 @@
     "expo": "~56.0.5",
     "expo-auth-session": "~56.0.12",
     "expo-dev-client": "~56.0.16",
+    "expo-file-system": "~56.0.7",
     "expo-font": "~56.0.5",
     "expo-haptics": "^56.0.3",
     "expo-image-picker": "~56.0.14",

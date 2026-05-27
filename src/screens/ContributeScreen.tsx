@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { runOcrWithRetries } from '../services/ocr';
+import { runOcrWithRetries, type OcrOutput } from '../services/ocr';
 import { getNearbyStations } from '../services/pricing';
 import { PriceSelector } from '../components/PriceSelector';
 import { PhotoPreview } from '../components/PhotoPreview';
@@ -40,6 +40,8 @@ export const ContributeScreen = () => {
   const [selectedStation, setSelectedStation] = useState<StationMarker | null>(null);
   const [showStationPicker, setShowStationPicker] = useState(false);
   const [ocrDone, setOcrDone] = useState(false);
+  const [ocrRawText, setOcrRawText] = useState<string>('');
+  const [ocrError, setOcrError] = useState<string>('');
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(14)).current;
 
@@ -69,6 +71,8 @@ export const ContributeScreen = () => {
       if (!result.canceled && result.assets[0]) {
         const uri = result.assets[0].uri;
         setImageUri(uri);
+        setOcrRawText('');
+        setOcrError('');
         setOcrDone(false);
         setStep('review');
         await runOcr(uri);
@@ -85,10 +89,17 @@ export const ContributeScreen = () => {
     try {
       const { output } = await runOcrWithRetries(uri);
       setPrices(output.prices);
+      setOcrRawText(output.rawText || '(empty)');
+      if (output.error) {
+        setOcrError(output.error);
+      }
       if (Object.keys(output.prices).length === 0) {
         toast.info('No prices detected. Enter them manually.');
       }
     } catch (err) {
+      const msg = (err as Error).message;
+      console.error('[OCR]', msg);
+      setOcrError(msg);
       toast.error('OCR failed. Enter prices manually.');
     } finally {
       setOcrDone(true);
@@ -146,6 +157,8 @@ export const ContributeScreen = () => {
     setPrices({});
     setSelectedStation(null);
     setError(null);
+    setOcrRawText('');
+    setOcrError('');
   }, []);
 
   const hasPrices = Object.values(prices).some((v) => typeof v === 'number' && v > 0);
@@ -216,6 +229,19 @@ export const ContributeScreen = () => {
                 </View>
               )}
             </Card>
+
+            {ocrDone && ocrRawText && (
+              <Card variant="glass" style={{ marginTop: spacing.md }}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="text" size={18} color={colors.warning} />
+                  <Text style={styles.sectionTitle}>OCR Raw Text</Text>
+                </View>
+                <Text style={styles.ocrRawText}>{ocrRawText}</Text>
+                {!!ocrError && (
+                  <Text style={[styles.error, { marginTop: spacing.xs }]}>Error: {ocrError}</Text>
+                )}
+              </Card>
+            )}
 
             <Card variant="glass" style={{ marginTop: spacing.md }}>
               <View style={styles.sectionHeader}>
@@ -444,5 +470,16 @@ const styles = StyleSheet.create({
   confirmPriceValue: {
     ...typography.h4,
     color: colors.textPrimary,
+  },
+  ocrRawText: {
+    ...typography.caption,
+    color: colors.warning,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    fontFamily: 'monospace',
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: spacing.xs,
   },
 });

@@ -261,6 +261,7 @@ export const runOcrWithRetries = async (
       }
     } catch (error) {
       lastError = formatError(error);
+      console.error('[OCR] Attempt failed:', lastError);
       if (attempt === maxRetries) break;
     }
 

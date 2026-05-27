@@ -1,15 +1,7 @@
-import { useRef } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  PressableProps,
-  StyleSheet,
-  Text,
-  ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, Animated, Pressable, PressableProps, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useScalePress } from '../../hooks/useScalePress';
 import { colors, radius, spacing, typography } from '../../theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -24,7 +16,7 @@ type Props = PressableProps & {
   style?: ViewStyle;
 };
 
-const sizeConfig: Record<ButtonSize, { py: number; px: number; iconSize: number; textStyle: typeof typography.captionBold }> = {
+const sizeConfig: Record<ButtonSize, { py: number; px: number; iconSize: number; textStyle: TextStyle }> = {
   sm: { py: 10, px: spacing.md, iconSize: 16, textStyle: typography.captionBold },
   md: { py: 14, px: spacing.lg, iconSize: 18, textStyle: typography.bodyBold },
   lg: { py: 16, px: spacing.xl, iconSize: 20, textStyle: typography.h4 },
@@ -40,14 +32,7 @@ export const Button = ({
   style,
   ...rest
 }: Props) => {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const onPressIn = () => {
-    Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start();
-  };
-  const onPressOut = () => {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-  };
+  const { scale, onPressIn, onPressOut } = useScalePress(0.96);
 
   const cfg = sizeConfig[size];
   const isDisabled = disabled || loading;

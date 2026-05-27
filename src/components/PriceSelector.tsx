@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 
 type Props = {
@@ -20,6 +21,7 @@ export const PriceSelector = ({ label, value, step = 0.01, onChange }: Props) =>
       Animated.timing(scale, { toValue: 0.97, duration: 50, useNativeDriver: true }),
       Animated.timing(scale, { toValue: 1, duration: 100, useNativeDriver: true }),
     ]).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
 
   const increment = () => {

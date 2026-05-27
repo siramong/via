@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, ColorValue, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useToastStore, type ToastVariant } from '../../state/toastStore';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
-const variantConfig: Record<ToastVariant, { colors: string[]; icon: keyof typeof Ionicons.glyphMap }> = {
-  success: { colors: ['#1a3a2a', '#0B1020'], icon: 'checkmark-circle' },
-  error: { colors: ['#3a1a1a', '#0B1020'], icon: 'alert-circle' },
-  info: { colors: ['#1a2a3a', '#0B1020'], icon: 'information-circle' },
+const variantConfig: Record<ToastVariant, { colors: readonly [ColorValue, ColorValue]; icon: keyof typeof Ionicons.glyphMap }> = {
+  success: { colors: ['#1a3a2a', '#0B1020'] as const, icon: 'checkmark-circle' },
+  error: { colors: ['#3a1a1a', '#0B1020'] as const, icon: 'alert-circle' },
+  info: { colors: ['#1a2a3a', '#0B1020'] as const, icon: 'information-circle' },
 };
 
 const ToastItem = ({ id, message, variant }: { id: string; message: string; variant: ToastVariant }) => {

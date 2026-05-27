@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../state/userStore';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { MapBackground } from '../components/MapView';
+import { useScalePress } from '../hooks/useScalePress';
 import { colors, radius, spacing } from '../theme';
 
 export const AuthScreen = () => {
@@ -26,6 +27,9 @@ export const AuthScreen = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
+  const loginTabScale = useScalePress(0.95);
+  const createTabScale = useScalePress(0.95);
+  const googleScale = useScalePress(0.97);
 
   useEffect(() => {
     Animated.parallel([
@@ -129,20 +133,28 @@ export const AuthScreen = () => {
 
         <Animated.View style={[styles.authCard, { opacity, transform: [{ translateY }] }]}>
           <View style={styles.modeTabs}>
-            <Pressable
-              style={[styles.modeTab, mode === 'login' && styles.modeTabActive]}
-              onPress={() => switchMode('login')}
-            >
-              <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>Login</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.modeTab, mode === 'signup' && styles.modeTabActive]}
-              onPress={() => switchMode('signup')}
-            >
-              <Text style={[styles.modeTabText, mode === 'signup' && styles.modeTabTextActive]}>
-                Create
-              </Text>
-            </Pressable>
+            <Animated.View style={{ flex: 1, transform: [{ scale: loginTabScale.scale }] }}>
+              <Pressable
+                style={[styles.modeTab, mode === 'login' && styles.modeTabActive]}
+                onPress={() => switchMode('login')}
+                onPressIn={loginTabScale.onPressIn}
+                onPressOut={loginTabScale.onPressOut}
+              >
+                <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>Login</Text>
+              </Pressable>
+            </Animated.View>
+            <Animated.View style={{ flex: 1, transform: [{ scale: createTabScale.scale }] }}>
+              <Pressable
+                style={[styles.modeTab, mode === 'signup' && styles.modeTabActive]}
+                onPress={() => switchMode('signup')}
+                onPressIn={createTabScale.onPressIn}
+                onPressOut={createTabScale.onPressOut}
+              >
+                <Text style={[styles.modeTabText, mode === 'signup' && styles.modeTabTextActive]}>
+                  Create
+                </Text>
+              </Pressable>
+            </Animated.View>
           </View>
 
           <View style={styles.inputRow}>
@@ -204,16 +216,18 @@ export const AuthScreen = () => {
             <View style={styles.dividerLine} />
           </View>
 
-          <Pressable style={styles.googleButton} onPress={handleGoogleSignIn} disabled={status === 'loading'}>
-            {status === 'loading' ? (
-              <ActivityIndicator color={colors.textPrimary} />
-            ) : (
-              <>
-                <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </>
-            )}
-          </Pressable>
+          <Animated.View style={{ transform: [{ scale: googleScale.scale }] }}>
+            <Pressable style={styles.googleButton} onPress={handleGoogleSignIn} onPressIn={googleScale.onPressIn} onPressOut={googleScale.onPressOut} disabled={status === 'loading'}>
+              {status === 'loading' ? (
+                <ActivityIndicator color={colors.textPrimary} />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </>
+              )}
+            </Pressable>
+          </Animated.View>
         </Animated.View>
 
         <Text style={styles.disclaimer}>

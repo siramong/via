@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -62,7 +63,9 @@ const AppTabs = () => (
       },
       tabBarHideOnKeyboard: true,
       tabBarIcon: ({ color, size, focused }) => (
-        <Ionicons name={iconForRoute(route.name, focused)} size={size ?? 22} color={color} />
+        <View style={focused ? { shadowColor: colors.primary, shadowOpacity: 0.6, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 8 } : undefined}>
+          <Ionicons name={iconForRoute(route.name, focused)} size={size ?? 22} color={color} />
+        </View>
       ),
     })}
   >

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Modal,
   Pressable,
   ScrollView,
@@ -16,6 +17,7 @@ import { getUserReports } from '../services/supabase';
 import { AccessCounter } from '../components/AccessCounter';
 import { MapBackground } from '../components/MapView';
 import { Badge } from '../components/ui/Badge';
+import { useScalePress } from '../hooks/useScalePress';
 import { colors, radius, spacing, typography } from '../theme';
 import type { UserReport } from '../types';
 
@@ -74,6 +76,9 @@ export const ProfileScreen = () => {
   const handleSignOut = useCallback(async () => {
     await signOut();
   }, [signOut]);
+
+  const signOutScale = useScalePress(0.96);
+  const accessOptionScale = useScalePress(0.97);
 
   if (!profile) {
     return (
@@ -152,12 +157,14 @@ export const ProfileScreen = () => {
             Earn access points by contributing verified fuel prices.
           </Text>
           <View style={styles.accessOptions}>
-            <AccessOption
-              icon="camera"
-              title="Submit a report"
-              description="Earn 2 access points per verified report"
-              onPress={() => {}}
-            />
+            <Animated.View style={{ transform: [{ scale: accessOptionScale.scale }] }}>
+              <AccessOption
+                icon="camera"
+                title="Submit a report"
+                description="Earn 2 access points per verified report"
+                onPress={() => {}}
+              />
+            </Animated.View>
           </View>
         </View>
 
@@ -176,16 +183,18 @@ export const ProfileScreen = () => {
         </View>
 
         {/* Sign out */}
-        <Pressable style={styles.dangerButton} onPress={handleSignOut} disabled={status === 'loading'}>
-          {status === 'loading' ? (
-            <ActivityIndicator color={colors.danger} />
-          ) : (
-            <>
-              <Ionicons name="log-out" size={16} color={colors.danger} />
-              <Text style={styles.dangerButtonText}>Sign Out</Text>
-            </>
-          )}
-        </Pressable>
+        <Animated.View style={{ transform: [{ scale: signOutScale.scale }] }}>
+          <Pressable style={styles.dangerButton} onPress={handleSignOut} onPressIn={signOutScale.onPressIn} onPressOut={signOutScale.onPressOut} disabled={status === 'loading'}>
+            {status === 'loading' ? (
+              <ActivityIndicator color={colors.danger} />
+            ) : (
+              <>
+                <Ionicons name="log-out" size={16} color={colors.danger} />
+                <Text style={styles.dangerButtonText}>Sign Out</Text>
+              </>
+            )}
+          </Pressable>
+        </Animated.View>
       </ScrollView>
 
       {/* Edit name modal */}

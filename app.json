@@ -12,6 +12,7 @@
     ],
     "plugins": [
       "expo-web-browser",
+      "expo-font",
       [
         "expo-splash-screen",
         {
@@ -33,24 +34,6 @@
           "cameraPermission": "Allow VIA to access your camera to capture fuel pump displays."
         }
       ]
-    ],
-    "plugins": [
-      "expo-web-browser",
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow VIA to access your location to find nearby fuel stations."
-        }
-      ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Allow VIA to access your photos.",
-          "cameraPermission": "Allow VIA to access your camera to capture fuel pump displays."
-        }
-      ],
-      "expo-font",
-      "expo-splash-screen"
     ],
     "ios": {
       "supportsTablet": true,

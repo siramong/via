@@ -97,7 +97,7 @@ export const getUserReports = async (profileId: string, limit = 10): Promise<Use
   if (!isSupabaseConfigured()) return [];
   const { data, error } = await supabase
     .from('reports')
-    .select('id, station_id, station:stations(name), ocr_json, status, created_at')
+    .select('id, station_id, station:gas_stations(name), ocr_json, status, created_at')
     .eq('user_id', profileId)
     .order('created_at', { ascending: false })
     .limit(limit);

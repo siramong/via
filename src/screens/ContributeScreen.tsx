@@ -56,21 +56,52 @@ export const ContributeScreen = () => {
     setLoading(true);
     setError(null);
     try {
+      const hasPermission = await ImagePicker.getCameraPermissionsAsync();
+      if (!hasPermission.granted) {
+        const req = await ImagePicker.requestCameraPermissionsAsync();
+        if (!req.granted) {
+          setError('Camera permission denied');
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (permErr) {
+      console.warn('[Camera] Permission check failed:', permErr);
+    }
+
+    try {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
-        quality: 0.8,
+        quality: 0.5,
+        cameraType: ImagePicker.CameraType.back,
+        allowsEditing: true,
+        aspect: [2, 3],
       });
-      if (!result.canceled && result.assets[0]) {
-        const uri = result.assets[0].uri;
-        setImageUri(uri);
-        setOcrRawText('');
-        setOcrError('');
-        setOcrDone(false);
-        setStep('review');
-        await runOcr(uri);
+
+      if (result.canceled) {
+        setLoading(false);
+        return;
       }
+
+      const asset = result.assets?.[0];
+      if (!asset?.uri) {
+        setError('No photo returned from camera');
+        setLoading(false);
+        return;
+      }
+
+      const uri = asset.uri;
+      setImageUri(uri);
+      setOcrRawText('');
+      setOcrError('');
+      setOcrDone(false);
+      setStep('review');
+
+      await runOcr(uri);
     } catch (err) {
-      setError((err as Error).message);
+      const msg = err instanceof Error ? err.message : 'Unknown camera error';
+      console.error('[Camera]', msg);
+      setError(msg);
     } finally {
       setLoading(false);
     }

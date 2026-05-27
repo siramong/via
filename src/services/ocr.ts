@@ -1,4 +1,5 @@
-import * as FileSystem from 'expo-file-system';
+import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import type { FuelPriceInput, FuelType } from '../types';
 
 export type OcrOutput = {
@@ -223,26 +224,59 @@ const extractFuelPricesFromText = (text: string): { prices: FuelPriceInput; conf
 const OCR_SPACE_API_KEY = process.env.EXPO_PUBLIC_OCR_SPACE_API_KEY ?? '';
 const OCR_SPACE_URL = 'https://api.ocr.space/parse/image';
 
-const callOcrSpace = async (imageUri: string): Promise<string> => {
-  const base64Image = await FileSystem.readAsStringAsync(imageUri, {
-    encoding: FileSystem.EncodingType.Base64,
+const MAX_IMAGE_WIDTH = 1200;
+const MAX_IMAGE_HEIGHT = 1600;
+
+const resizeForOcr = async (uri: string): Promise<string> => {
+  const result = await manipulateAsync(uri, [{ resize: { width: MAX_IMAGE_WIDTH, height: MAX_IMAGE_HEIGHT } }], {
+    compress: 0.7,
+    format: SaveFormat.JPEG,
   });
+  return result.uri;
+};
+
+const callOcrSpace = async (imageUri: string): Promise<string> => {
+  let base64Image: string;
+  try {
+    const resized = await resizeForOcr(imageUri);
+    base64Image = await readAsStringAsync(resized, {
+      encoding: EncodingType.Base64,
+    });
+  } catch (readErr) {
+    throw new Error(`Failed to read image file: ${formatError(readErr)}`);
+  }
+
+  if (!OCR_SPACE_API_KEY) {
+    throw new Error('OCR_SPACE_API_KEY not configured');
+  }
 
   const formData = new FormData();
   formData.append('apikey', OCR_SPACE_API_KEY);
   formData.append('OCREngine', '2');
-  formData.append('base64Image', `data:image/jpeg;base64,${base64Image}`);
+  formData.append('base64Image', base64Image);
 
-  const response = await fetch(OCR_SPACE_URL, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new Error(`OCR.space error: ${response.status} ${response.statusText}`);
+  let response: Response;
+  try {
+    response = await fetch(OCR_SPACE_URL, {
+      method: 'POST',
+      body: formData,
+    });
+  } catch (fetchErr) {
+    throw new Error(`OCR.space network error: ${formatError(fetchErr)}`);
   }
 
-  const json = await response.json();
+  if (!response.ok) {
+    let body = '';
+    try { body = await response.text(); } catch {}
+    throw new Error(`OCR.space error ${response.status}: ${body.slice(0, 500)}`);
+  }
+
+  let json: any;
+  try {
+    json = await response.json();
+  } catch (jsonErr) {
+    throw new Error(`OCR.space invalid response: ${formatError(jsonErr)}`);
+  }
 
   if (json.IsErroredOnProcessing) {
     const errorMsg = json.ErrorMessage?.[0]?.ErrorMessage ?? 'Unknown processing error';

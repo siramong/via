@@ -52,12 +52,19 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundleUrl": "https://cdn.jsdelivr.net/npm/@react-native-web@0.19"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a233de6b-70a0-4732-ad5e-bf624c38e153"
+      }
+    },
+    "owner": "siramong"
   }
 }

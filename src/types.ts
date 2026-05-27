@@ -26,6 +26,14 @@ export type StationMarker = {
   trustScore?: number;
 };
 
+export type RealtimeStation = {
+  placeId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+};
+
 export type UserProfile = {
   id: string;
   auth_id: string;

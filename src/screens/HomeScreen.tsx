@@ -14,7 +14,7 @@ import { FuelCard } from '../components/FuelCard';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
-import { getCheapestStation } from '../services/pricing';
+import { getBestStation } from '../services/pricing';
 import { colors, spacing } from '../theme';
 import type { StationResult } from '../types';
 
@@ -37,7 +37,7 @@ export const HomeScreen = () => {
     }
     setError(null);
     try {
-      const station = await getCheapestStation(coords);
+      const station = await getBestStation(coords);
       setResult(station);
       if (profile && profile.access_remaining > 0) {
         await consumeAccess();

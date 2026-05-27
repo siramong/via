@@ -3,6 +3,7 @@ import {
   Animated,
   Dimensions,
   Linking,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -64,15 +65,16 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
   };
 
   return (
-    <View style={styles.wrapper} pointerEvents="box-none">
-      <Animated.View
-        style={[styles.backdrop, { opacity: backdropOpacity }]}
-      >
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-      </Animated.View>
-      <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
-        <View style={styles.handle} />
-        <View style={styles.header}>
+    <Modal transparent animationType="none" visible onRequestClose={onClose}>
+      <View style={styles.wrapper} pointerEvents="box-none">
+        <Animated.View
+          style={[styles.backdrop, { opacity: backdropOpacity }]}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        </Animated.View>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+          <View style={styles.handle} />
+          <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={styles.iconWrap}>
               <Ionicons name="location" size={18} color={colors.primary} />
@@ -136,6 +138,7 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
         </View>
       </Animated.View>
     </View>
+    </Modal>
   );
 };
 

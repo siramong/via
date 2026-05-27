@@ -1,9 +1,9 @@
-import TextRecognition from '@react-native-ml-kit/text-recognition';
+import * as FileSystem from 'expo-file-system';
 import type { FuelPriceInput, FuelType } from '../types';
 
 export type OcrOutput = {
   prices: FuelPriceInput;
-  confidence: number; // 0..1
+  confidence: number;
   rawText: string;
   error?: string;
 };
@@ -46,7 +46,6 @@ const fuelPatterns: Record<FuelType, RegExp[]> = {
   ],
 };
 
-// MEJORA 1: Soporta 2 o 3 decimales y admite letras que el OCR confunde frecuentemente con números
 const PRICE_REGEX = /\b(?:usd\s*)?\$?\s*([0-9OoBbSsZz]{1,2})\s*([.,'`-])\s*([0-9OoBbSsZz]{2,3})\b/gi;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -76,7 +75,6 @@ const normalizeText = (value: string): string =>
 const normalizeForPriceScan = (value: string): string =>
   normalizeText(value).replace(/\s*([.,])\s*/g, '$1');
 
-// MEJORA 2: Limpieza de caracteres leídos erróneamente en pantallas LED
 const sanitizeOcrNumber = (str: string): string => {
   return str
     .toUpperCase()
@@ -91,10 +89,9 @@ const extractPriceCandidates = (line: string): number[] => {
   const cleanLine = normalizeForPriceScan(line);
 
   for (const match of cleanLine.matchAll(PRICE_REGEX)) {
-    // Aplicamos la limpieza solo sobre los bloques que ya pasaron la validación del Regex
     const integerPart = sanitizeOcrNumber(match[1]);
     const decimalPart = sanitizeOcrNumber(match[3]);
-    
+
     const value = Number.parseFloat(`${integerPart}.${decimalPart}`);
     if (Number.isFinite(value)) {
       candidates.push(value);
@@ -107,7 +104,6 @@ const extractPriceCandidates = (line: string): number[] => {
 const detectFuelHits = (line: string): FuelType[] => {
   const normalized = normalizeText(line);
 
-  // MEJORA 3: Prioridad de Diésel. Evita que "DIESEL PREMIUM" se asigne a gasolina premium.
   if (fuelPatterns.diesel.some((pattern) => pattern.test(normalized))) {
     return ['diesel'];
   }
@@ -181,12 +177,10 @@ const assignByOrder = (
   const allCandidates = [...new Set(lines.flatMap((line) => line.prices))].sort((a, b) => a - b);
   if (allCandidates.length < 3) return evidence;
 
-  // MEJORA 4: Orden lógico real. 
-  // 0 = Más barato, 1 = Medio, 2 = Más caro.
   const desiredIndex: Record<FuelType, number> = {
-    diesel: 0,   // Ej: 1.797
-    regular: 1,  // Ej: Ecopaís a 2.722
-    premium: 2,  // Ej: Súper a 4.880
+    diesel: 0,
+    regular: 1,
+    premium: 2,
   };
 
   for (const fuelType of FUEL_ORDER) {
@@ -226,6 +220,38 @@ const extractFuelPricesFromText = (text: string): { prices: FuelPriceInput; conf
   return { prices, confidence };
 };
 
+const OCR_SPACE_API_KEY = process.env.EXPO_PUBLIC_OCR_SPACE_API_KEY ?? '';
+const OCR_SPACE_URL = 'https://api.ocr.space/parse/image';
+
+const callOcrSpace = async (imageUri: string): Promise<string> => {
+  const base64Image = await FileSystem.readAsStringAsync(imageUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  const formData = new FormData();
+  formData.append('apikey', OCR_SPACE_API_KEY);
+  formData.append('OCREngine', '2');
+  formData.append('base64Image', `data:image/jpeg;base64,${base64Image}`);
+
+  const response = await fetch(OCR_SPACE_URL, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`OCR.space error: ${response.status} ${response.statusText}`);
+  }
+
+  const json = await response.json();
+
+  if (json.IsErroredOnProcessing) {
+    const errorMsg = json.ErrorMessage?.[0]?.ErrorMessage ?? 'Unknown processing error';
+    throw new Error(`OCR.space processing error: ${errorMsg}`);
+  }
+
+  return json.ParsedResults?.[0]?.ParsedText ?? '';
+};
+
 export const runOcrWithRetries = async (
   imageUri: string,
   minConfidence = 0.6,
@@ -237,9 +263,8 @@ export const runOcrWithRetries = async (
 
   while (attempt <= maxRetries) {
     try {
-      const result = await TextRecognition.recognize(imageUri);
-      const rawText = result?.text ?? '';
-      console.log("TEXTO CRUDO DEL OCR:", rawText);
+      const rawText = await callOcrSpace(imageUri);
+      console.log('TEXTO CRUDO DEL OCR:', rawText);
 
       const { prices, confidence } = extractFuelPricesFromText(rawText);
 

@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { runOcrWithRetries, type OcrOutput } from '../services/ocr';
-import { getNearbyStations } from '../services/pricing';
 import { PriceSelector } from '../components/PriceSelector';
 import { PhotoPreview } from '../components/PhotoPreview';
 import { StationSelector } from '../components/StationSelector';
@@ -36,7 +35,6 @@ export const ContributeScreen = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'camera' | 'review' | 'confirm'>('camera');
   const [error, setError] = useState<string | null>(null);
-  const [stations, setStations] = useState<StationMarker[]>([]);
   const [selectedStation, setSelectedStation] = useState<StationMarker | null>(null);
   const [showStationPicker, setShowStationPicker] = useState(false);
   const [ocrDone, setOcrDone] = useState(false);
@@ -44,12 +42,6 @@ export const ContributeScreen = () => {
   const [ocrError, setOcrError] = useState<string>('');
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(14)).current;
-
-  useEffect(() => {
-    if (coords) {
-      getNearbyStations(coords).then(setStations).catch(() => {});
-    }
-  }, [coords]);
 
   useEffect(() => {
     opacity.setValue(0);
@@ -343,8 +335,8 @@ export const ContributeScreen = () => {
 
       {showStationPicker && (
         <StationSelector
-          stations={stations}
           selectedId={selectedStation?.stationId ?? null}
+          userCoords={coords}
           onSelect={(s) => {
             setSelectedStation(s);
             setShowStationPicker(false);

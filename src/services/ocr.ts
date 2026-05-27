@@ -239,6 +239,7 @@ export const runOcrWithRetries = async (
     try {
       const result = await TextRecognition.recognize(imageUri);
       const rawText = result?.text ?? '';
+      console.log("TEXTO CRUDO DEL OCR:", rawText);
 
       const { prices, confidence } = extractFuelPricesFromText(rawText);
 

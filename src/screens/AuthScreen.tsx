@@ -21,6 +21,7 @@ export const AuthScreen = () => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
@@ -33,6 +34,11 @@ export const AuthScreen = () => {
     ]).start();
   }, [opacity, translateY]);
 
+  const switchMode = useCallback((newMode: 'login' | 'signup') => {
+    setMode(newMode);
+    setAuthError(null);
+  }, []);
+
   const handleGoogleSignIn = useCallback(async () => {
     await signInWithGoogle();
   }, [signInWithGoogle]);
@@ -40,6 +46,17 @@ export const AuthScreen = () => {
   const handleEmailAuth = useCallback(async () => {
     if (!email || !password) {
       setAuthError('Email and password required');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setAuthError('Please enter a valid email address');
+      return;
+    }
+
+    if (password.length < 6) {
+      setAuthError('Password must be at least 6 characters');
       return;
     }
 
@@ -86,6 +103,8 @@ export const AuthScreen = () => {
     }
   }, [email, password, mode]);
 
+  const displayError = authError || error;
+
   return (
     <View style={styles.container}>
       <MapBackground />
@@ -112,13 +131,13 @@ export const AuthScreen = () => {
           <View style={styles.modeTabs}>
             <Pressable
               style={[styles.modeTab, mode === 'login' && styles.modeTabActive]}
-              onPress={() => setMode('login')}
+              onPress={() => switchMode('login')}
             >
               <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>Login</Text>
             </Pressable>
             <Pressable
               style={[styles.modeTab, mode === 'signup' && styles.modeTabActive]}
-              onPress={() => setMode('signup')}
+              onPress={() => switchMode('signup')}
             >
               <Text style={[styles.modeTabText, mode === 'signup' && styles.modeTabTextActive]}>
                 Create
@@ -148,12 +167,24 @@ export const AuthScreen = () => {
               placeholderTextColor={colors.textSecondary}
               value={password}
               onChangeText={setPassword}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               editable={!loading}
             />
+            <Pressable onPress={() => setShowPassword((p) => !p)} hitSlop={8}>
+              <Ionicons
+                name={showPassword ? 'eye-off' : 'eye'}
+                size={18}
+                color={colors.textMuted}
+              />
+            </Pressable>
           </View>
 
-          {!!authError && <Text style={styles.error}>{authError}</Text>}
+          {!!displayError && (
+            <View style={styles.errorCard}>
+              <Ionicons name="alert-circle" size={14} color={colors.danger} />
+              <Text style={styles.errorText}>{displayError}</Text>
+            </View>
+          )}
 
           <Pressable onPress={handleEmailAuth} disabled={loading} style={styles.primaryButton}>
             <LinearGradient colors={[colors.primary, colors.accent]} style={styles.primaryButtonFill}>
@@ -172,8 +203,6 @@ export const AuthScreen = () => {
             <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
           </View>
-
-          {!!error && <Text style={styles.error}>{error}</Text>}
 
           <Pressable style={styles.googleButton} onPress={handleGoogleSignIn} disabled={status === 'loading'}>
             {status === 'loading' ? (
@@ -365,11 +394,22 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '600',
   },
-  error: {
+  errorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.dangerLight,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 92, 92, 0.25)',
+  },
+  errorText: {
     color: colors.danger,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
     fontSize: 12,
+    flex: 1,
   },
   disclaimer: {
     color: colors.textSecondary,

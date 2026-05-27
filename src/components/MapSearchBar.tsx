@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadows, spacing } from '../theme';
 
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export const MapSearchBar = ({ value, onChange, onClear }: Props) => {
+  const insets = useSafeAreaInsets();
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const opacity = useRef(new Animated.Value(0)).current;
@@ -19,7 +21,7 @@ export const MapSearchBar = ({ value, onChange, onClear }: Props) => {
   }, [opacity]);
 
   return (
-    <Animated.View style={[styles.container, { opacity }]}>
+    <Animated.View style={[styles.container, { opacity, top: insets.top + spacing.md }]}>
       <View style={[styles.inputRow, focused && styles.inputRowFocused]}>
         <Ionicons name="search" size={18} color={colors.textSecondary} />
         <TextInput
@@ -46,7 +48,6 @@ export const MapSearchBar = ({ value, onChange, onClear }: Props) => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: spacing.xl,
     left: spacing.lg,
     right: spacing.lg,
     zIndex: 50,

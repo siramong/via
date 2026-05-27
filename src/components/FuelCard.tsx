@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -93,7 +94,7 @@ export const FuelCard = ({ result, locked, onViewOnMap, onContribute }: Props) =
         <Text style={styles.priceLabel}>Best price</Text>
         <View style={styles.priceRow}>
           <Text style={styles.price}>${result.price.toFixed(2)}</Text>
-          <Badge variant="info" label={result.fuelType} />
+          <Badge variant="info" label={FUEL_DISPLAY[result.fuelType]} />
         </View>
       </View>
 

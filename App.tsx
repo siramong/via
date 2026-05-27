@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -30,45 +31,48 @@ const iconForRoute = (name: string, focused: boolean) => {
   }
 };
 
-const AppTabs = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => ({
-      headerShown: false,
-      tabBarStyle: {
-        position: 'absolute',
-        left: 16,
-        right: 16,
-        bottom: 16,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: colors.card,
-        borderTopWidth: 0,
-        paddingBottom: 8,
-        paddingTop: 8,
-        shadowColor: '#000',
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 8 },
-        elevation: 16,
-      },
-      tabBarActiveTintColor: colors.primary,
-      tabBarInactiveTintColor: colors.textSecondary,
-      tabBarLabelStyle: {
-        fontSize: 11,
-        fontWeight: '600',
-        marginBottom: 2,
-      },
-      tabBarItemStyle: {
-        paddingVertical: 2,
-      },
-      tabBarHideOnKeyboard: true,
-      tabBarIcon: ({ color, size, focused }) => (
-        <View style={focused ? { shadowColor: colors.primary, shadowOpacity: 0.6, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 8 } : undefined}>
-          <Ionicons name={iconForRoute(route.name, focused)} size={size ?? 22} color={color} />
-        </View>
-      ),
-    })}
-  >
+const AppTabs = () => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          position: 'absolute',
+          left: 28,
+          right: 28,
+          bottom: insets.bottom + 48,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: colors.card,
+          borderTopWidth: 0,
+          paddingBottom: 6,
+          paddingTop: 6,
+          shadowColor: '#000',
+          shadowOpacity: 0.25,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 16,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          marginBottom: 1,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
+        },
+        tabBarHideOnKeyboard: true,
+        tabBarIcon: ({ color, size, focused }) => (
+          <View style={focused ? { shadowColor: colors.primary, shadowOpacity: 0.6, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 8 } : undefined}>
+            <Ionicons name={iconForRoute(route.name, focused)} size={size ?? 20} color={color} />
+          </View>
+        ),
+      })}
+    >
     <Tab.Screen
       name="Home"
       component={HomeScreen}
@@ -102,7 +106,8 @@ const AppTabs = () => (
       }}
     />
   </Tab.Navigator>
-);
+  );
+};
 
 export default function App() {
   const { session, bootstrap } = useUserStore();
@@ -115,12 +120,12 @@ export default function App() {
   }, [bootstrap]);
 
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="light" />
       <NavigationContainer>
         {session ? <AppTabs /> : <AuthScreen />}
       </NavigationContainer>
       <ToastContainer />
-    </>
+    </SafeAreaProvider>
   );
 }

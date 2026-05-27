@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../state/userStore';
@@ -18,6 +19,7 @@ import { useScalePress } from '../hooks/useScalePress';
 import { colors, radius, spacing } from '../theme';
 
 export const AuthScreen = () => {
+  const insets = useSafeAreaInsets();
   const { signInWithGoogle, status, error } = useUserStore();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -116,7 +118,7 @@ export const AuthScreen = () => {
         colors={['rgba(9, 14, 28, 0.85)', 'rgba(9, 14, 28, 0.65)', 'rgba(9, 14, 28, 0.9)']}
         style={StyleSheet.absoluteFill}
       />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]} keyboardShouldPersistTaps="handled">
         <View style={styles.brandRow}>
           <View style={styles.logo}>
             <Ionicons name="navigate" size={20} color={colors.textPrimary} />

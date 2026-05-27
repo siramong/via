@@ -8,7 +8,7 @@ export type OcrOutput = {
 };
 
 const fuelPatterns: Record<FuelType, RegExp[]> = {
-  regular: [/regular/i, /\breg\b/i, /unleaded/i],
+  regular: [/regular/i, /\breg\b/i, /unleaded/i, /ecopais/i, /ecopaís/i, /extra/i],
   premium: [/premium/i, /\bprem\b/i, /super/i],
   diesel: [/diesel/i, /\bdsl\b/i],
 };
@@ -17,15 +17,29 @@ const priceRegex = /(\d{1,2}\.\d{2})/;
 
 const extractFuelPricesFromText = (text: string): FuelPriceInput => {
   const prices: FuelPriceInput = {};
-  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
-  for (const line of lines) {
+  const fuelLines: { fuelType: FuelType; lineIndex: number }[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     for (const fuelType of Object.keys(fuelPatterns) as FuelType[]) {
-      if (fuelPatterns[fuelType].some((pattern) => pattern.test(line))) {
-        const match = line.match(priceRegex);
-        if (match) {
-          prices[fuelType] = Number.parseFloat(match[1]);
-        }
+      if (fuelPatterns[fuelType].some((p) => p.test(line))) {
+        fuelLines.push({ fuelType, lineIndex: i });
+        break;
+      }
+    }
+  }
+
+  for (const fl of fuelLines) {
+    if (prices[fl.fuelType] !== undefined) continue;
+    for (let offset = 0; offset <= 2; offset++) {
+      const idx = fl.lineIndex + offset;
+      if (idx >= lines.length) break;
+      const m = lines[idx].match(priceRegex);
+      if (m) {
+        prices[fl.fuelType] = Number.parseFloat(m[1]);
+        break;
       }
     }
   }
@@ -33,21 +47,15 @@ const extractFuelPricesFromText = (text: string): FuelPriceInput => {
   if (!prices.regular || !prices.premium || !prices.diesel) {
     const allMatches = lines
       .flatMap((line) => {
-        const match = line.match(priceRegex);
-        return match ? [match[1]] : [];
+        const m = line.match(priceRegex);
+        return m ? [m[1]] : [];
       })
-      .map((match) => Number.parseFloat(match));
+      .map(Number.parseFloat);
 
-    const fallback = allMatches.sort((a, b) => a - b);
-    if (!prices.regular && fallback[0]) {
-      prices.regular = fallback[0];
-    }
-    if (!prices.premium && fallback[1]) {
-      prices.premium = fallback[1];
-    }
-    if (!prices.diesel && fallback[2]) {
-      prices.diesel = fallback[2];
-    }
+    const sorted = [...allMatches].sort((a, b) => a - b);
+    if (!prices.regular && sorted[0]) prices.regular = sorted[0];
+    if (!prices.premium && sorted[1]) prices.premium = sorted[1];
+    if (!prices.diesel && sorted[2]) prices.diesel = sorted[2];
   }
 
   return prices;
@@ -65,7 +73,7 @@ export const runOcrWithRetries = async (
     const result = await TextRecognition.recognize(imageUri);
     const rawText = result.text ?? '';
     const prices = extractFuelPricesFromText(rawText);
-    const matchedCount = Object.values(prices).filter((value) => typeof value === 'number').length;
+    const matchedCount = Object.values(prices).filter((v) => typeof v === 'number').length;
     const confidence = matchedCount / 3;
 
     const output = { prices, confidence, rawText };

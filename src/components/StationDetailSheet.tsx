@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -92,7 +93,7 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
             <View style={styles.priceRow}>
               <Text style={styles.price}>${station.price.toFixed(2)}</Text>
               {station.fuelType && (
-                <Badge variant="info" label={station.fuelType} style={{ alignSelf: 'center' }} />
+                <Badge variant="info" label={FUEL_DISPLAY[station.fuelType]} style={{ alignSelf: 'center' }} />
               )}
             </View>
           </View>

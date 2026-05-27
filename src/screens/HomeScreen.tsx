@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { MapBackground } from '../components/MapView';
 import { FuelCard } from '../components/FuelCard';
@@ -18,6 +19,7 @@ import { colors, spacing } from '../theme';
 import type { StationResult } from '../types';
 
 export const HomeScreen = () => {
+  const insets = useSafeAreaInsets();
   const { coords, refresh, status: locationStatus, error: locationError } = useLocationStore();
   const { profile, consumeAccess } = useUserStore();
   const navigation = useNavigation<any>();
@@ -81,7 +83,7 @@ export const HomeScreen = () => {
     <View style={styles.container}>
       <MapBackground />
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

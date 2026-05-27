@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, shadows, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography } from '../theme';
 
 type Props = {
   label: string;
@@ -10,8 +10,6 @@ type Props = {
   step?: number;
   onChange: (next: number) => void;
 };
-
-const presets = [0.10, 0.50, 1.00];
 
 export const PriceSelector = ({ label, value, step = 0.01, onChange }: Props) => {
   const scale = useRef(new Animated.Value(1)).current;
@@ -32,42 +30,21 @@ export const PriceSelector = ({ label, value, step = 0.01, onChange }: Props) =>
     onChange(Number(Math.max(0, value - step).toFixed(2)));
     animate();
   };
-  const addPreset = (v: number) => {
-    onChange(Number((value + v).toFixed(2)));
-    animate();
-  };
-  const subPreset = (v: number) => {
-    onChange(Number(Math.max(0, value - v).toFixed(2)));
-    animate();
-  };
 
   return (
     <Animated.View style={[styles.container, { transform: [{ scale }] }]}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.controls}>
         <Pressable style={styles.button} onPress={decrement}>
-          <Ionicons name="remove" size={20} color={colors.background} />
+          <Ionicons name="remove" size={22} color={colors.background} />
         </Pressable>
         <View style={styles.valueWrap}>
           <Text style={styles.currency}>$</Text>
           <Text style={styles.value}>{value.toFixed(2)}</Text>
         </View>
         <Pressable style={styles.button} onPress={increment}>
-          <Ionicons name="add" size={20} color={colors.background} />
+          <Ionicons name="add" size={22} color={colors.background} />
         </Pressable>
-      </View>
-      <View style={styles.presets}>
-        {presets.map((p) => (
-          <Pressable key={p} style={styles.presetBtn} onPress={() => subPreset(p)}>
-            <Text style={styles.presetText}>-{p.toFixed(2)}</Text>
-          </Pressable>
-        ))}
-        <View style={styles.presetSpacer} />
-        {presets.map((p) => (
-          <Pressable key={`p${p}`} style={styles.presetBtn} onPress={() => addPreset(p)}>
-            <Text style={styles.presetText}>+{p.toFixed(2)}</Text>
-          </Pressable>
-        ))}
       </View>
     </Animated.View>
   );
@@ -94,47 +71,27 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   button: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.sm,
   },
   valueWrap: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 1,
+    gap: 2,
   },
   currency: {
-    ...typography.h2,
     color: colors.textSecondary,
-  },
-  value: {
-    ...typography.h1,
-    color: colors.textPrimary,
-  },
-  presets: {
-    flexDirection: 'row',
-    marginTop: spacing.sm,
-    gap: spacing.xs,
-    alignItems: 'center',
-  },
-  presetBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-    backgroundColor: colors.glass,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  presetText: {
-    ...typography.caption,
-    color: colors.textSecondary,
+    fontSize: 20,
     fontWeight: '600',
   },
-  presetSpacer: {
-    flex: 1,
+  value: {
+    color: colors.textPrimary,
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
 });

@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../state/userStore';
@@ -46,6 +47,7 @@ const statusBadgeVariant = (status: string) => {
 };
 
 export const ProfileScreen = () => {
+  const insets = useSafeAreaInsets();
   const { profile, signOut, status, updateDisplayName } = useUserStore();
   const [reports, setReports] = useState<UserReport[]>([]);
   const [reportsLoading, setReportsLoading] = useState(true);
@@ -94,7 +96,7 @@ export const ProfileScreen = () => {
   return (
     <View style={styles.container}>
       <MapBackground />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }]}>
         {/* Header with avatar */}
         <View style={styles.header}>
           <LinearGradient

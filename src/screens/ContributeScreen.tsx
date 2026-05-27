@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { runOcrWithRetries } from '../services/ocr';
@@ -18,6 +19,7 @@ import { MapBackground } from '../components/MapView';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { colors, radius, spacing, typography } from '../theme';
 import { supabase } from '../services/supabase';
 import { useUserStore } from '../state/userStore';
@@ -26,6 +28,7 @@ import { toast } from '../state/toastStore';
 import type { FuelType, FuelPriceInput, StationMarker } from '../types';
 
 export const ContributeScreen = () => {
+  const insets = useSafeAreaInsets();
   const { profile, grantAccess, session } = useUserStore();
   const { coords } = useLocationStore();
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -60,7 +63,7 @@ export const ContributeScreen = () => {
     setError(null);
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         quality: 0.8,
       });
       if (!result.canceled && result.assets[0]) {
@@ -151,7 +154,7 @@ export const ContributeScreen = () => {
   return (
     <View style={styles.container}>
       <MapBackground />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }]}>
         <View style={styles.header}>
           <View style={styles.headerIcon}>
             <Ionicons name="camera" size={18} color={colors.textPrimary} />
@@ -205,7 +208,7 @@ export const ContributeScreen = () => {
                   {allFuelTypes.map((fuelType) => (
                     <PriceSelector
                       key={fuelType}
-                      label={fuelType}
+                      label={FUEL_DISPLAY[fuelType]}
                       value={prices[fuelType] ?? 0}
                       onChange={(v) => updatePrice(fuelType, v)}
                     />
@@ -277,7 +280,7 @@ export const ContributeScreen = () => {
                     if (v == null || v === 0) return null;
                     return (
                       <View key={ft} style={styles.confirmPriceItem}>
-                        <Badge variant="info" label={ft} />
+                        <Badge variant="info" label={FUEL_DISPLAY[ft]} />
                         <Text style={styles.confirmPriceValue}>${v.toFixed(2)}</Text>
                       </View>
                     );

@@ -251,7 +251,7 @@ const callOcrSpace = async (imageUri: string): Promise<string> => {
       mimeType: 'image/jpeg',
       parameters: {
         apikey: OCR_SPACE_API_KEY,
-        OCREngine: '2',
+        OCREngine: '3',
         language: 'spa',
         scale: 'true',
         isTable: 'true',

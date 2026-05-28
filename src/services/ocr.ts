@@ -8,45 +8,35 @@ export type OcrOutput = {
   error?: string;
 };
 
-type FuelEvidence = {
-  value: number;
-  score: number;
-  source: 'label' | 'label_lookahead' | 'fallback_order';
-  lineIndex?: number;
-};
-
-type LineInfo = {
-  original: string;
-  normalized: string;
-  lineIndex: number;
-  prices: number[];
-  fuelHits: FuelType[];
-};
-
 const FUEL_ORDER: FuelType[] = ['regular', 'premium', 'diesel'];
 
-const fuelPatterns: Record<FuelType, RegExp[]> = {
+const fuelPatterns: Record<FuelType, [RegExp, number][]> = {
   regular: [
-    /\bregular\b/i,
-    /\breg\b/i,
-    /\bunleaded\b/i,
-    /\bextra\b/i,
-    /\becopais\b/i,
+    [/\bregular\b/i, 1],
+    [/\breg\b/i, 0.7],
+    [/\bextra\b/i, 1],
+    [/\becopais\b/i, 1],
+    [/\bcorriente\b/i, 1],
+    [/\bgasolina\b/i, 0.8],
+    [/\brgl[ae]r\b/i, 0.7],
+    [/\brgl\b/i, 0.5],
   ],
   premium: [
-    /\bpremium\b/i,
-    /\bprem\b/i,
-    /\bsuper\b/i,
+    [/\bpremium\b/i, 1],
+    [/\bprem\b/i, 0.7],
+    [/\bsuper\b/i, 1],
+    [/\bsup\b/i, 0.6],
+    [/\bprm[iu]m\b/i, 0.7],
   ],
   diesel: [
-    /\bdiesel\b/i,
-    /\bdsl\b/i,
-    /\bgasoil\b/i,
-    /\bgasoleo\b/i,
+    [/\bdiesel\b/i, 1],
+    [/\bdsl\b/i, 0.6],
+    [/\bgasoil\b/i, 1],
+    [/\bgasoleo\b/i, 1],
+    [/\bdi[ez]sel\b/i, 0.8],
+    [/\bdsl\b/i, 0.6],
   ],
 };
-
-const PRICE_REGEX = /\b(?:usd\s*)?\$?\s*([0-9OoBbSsZz]{1,2})\s*([.,'`-])\s*([0-9OoBbSsZz]{2,3})\b/gi;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -67,157 +57,120 @@ const normalizeText = (value: string): string =>
     .replace(/\u00A0/g, ' ')
     .replace(/[|¡]/g, 'i')
     .replace(/[“”]/g, '"')
-    .replace(/[’]/g, "'")
+    .replace(/[’']/g, "'")
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
 
-const normalizeForPriceScan = (value: string): string =>
-  normalizeText(value).replace(/\s*([.,])\s*/g, '$1');
-
-const sanitizeOcrNumber = (str: string): string => {
-  return str
+const sanitizeOcrNumber = (str: string): string =>
+  str
     .toUpperCase()
-    .replace(/[O]/g, '0')
-    .replace(/[B]/g, '8')
-    .replace(/[S]/g, '5')
-    .replace(/[Z]/g, '2');
-};
+    .replace(/[Oo]/g, '0')
+    .replace(/[Bb]/g, '8')
+    .replace(/[Ss]/g, '5')
+    .replace(/[Zz]/g, '2');
 
-const extractPriceCandidates = (line: string): number[] => {
-  const candidates: number[] = [];
-  const cleanLine = normalizeForPriceScan(line);
+type PriceMatch = { value: number; lineIdx: number; charIdx: number };
 
-  for (const match of cleanLine.matchAll(PRICE_REGEX)) {
-    const integerPart = sanitizeOcrNumber(match[1]);
-    const decimalPart = sanitizeOcrNumber(match[3]);
+const PRICE_REGEX = /(?:\$|usd)?\s*(\d{1,2})\s*([.,'`-])\s*(\d{2,3})\b/gi;
 
-    const value = Number.parseFloat(`${integerPart}.${decimalPart}`);
-    if (Number.isFinite(value)) {
-      candidates.push(value);
+const extractAllPrices = (lines: string[]): PriceMatch[] => {
+  const results: PriceMatch[] = [];
+  for (let li = 0; li < lines.length; li++) {
+    for (const m of lines[li].matchAll(PRICE_REGEX)) {
+      const intPart = sanitizeOcrNumber(m[1]);
+      const decPart = sanitizeOcrNumber(m[3]);
+      const value = Number.parseFloat(`${intPart}.${decPart}`);
+      if (!Number.isFinite(value)) continue;
+      if (value < 0.1 || value > 99) continue;
+      results.push({ value, lineIdx: li, charIdx: m.index ?? 0 });
     }
   }
-
-  return [...new Set(candidates)];
+  return results;
 };
 
-const detectFuelHits = (line: string): FuelType[] => {
-  const normalized = normalizeText(line);
+type FuelHit = { type: FuelType; score: number; lineIdx: number; charIdx: number };
 
-  if (fuelPatterns.diesel.some((pattern) => pattern.test(normalized))) {
-    return ['diesel'];
+const detectAllFuels = (lines: string[]): FuelHit[] => {
+  const hits: FuelHit[] = [];
+  for (let li = 0; li < lines.length; li++) {
+    const norm = normalizeText(lines[li]);
+    for (const ft of FUEL_ORDER) {
+      for (const [re, score] of fuelPatterns[ft]) {
+        const m = re.exec(norm);
+        if (m) {
+          hits.push({ type: ft, score, lineIdx: li, charIdx: m.index });
+        }
+      }
+    }
   }
-
-  return FUEL_ORDER.filter((fuelType) =>
-    fuelPatterns[fuelType].some((pattern) => pattern.test(normalized)),
-  );
+  return hits;
 };
 
-const buildLineInfo = (text: string): LineInfo[] =>
-  text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((original, lineIndex) => ({
-      original,
-      normalized: normalizeForPriceScan(original),
-      lineIndex,
-      prices: extractPriceCandidates(original),
-      fuelHits: detectFuelHits(original),
-    }));
-
-const setBestEvidence = (
-  evidence: Partial<Record<FuelType, FuelEvidence>>,
-  fuelType: FuelType,
-  next: FuelEvidence,
-) => {
-  const current = evidence[fuelType];
-  if (!current || next.score > current.score) {
-    evidence[fuelType] = next;
-  }
+const calculateConfidence = (evidence: Partial<Record<FuelType, { value: number; score: number }>>): number => {
+  const scores = FUEL_ORDER.map((ft) => evidence[ft]?.score ?? 0);
+  return scores.reduce((a, b) => a + b, 0) / FUEL_ORDER.length;
 };
 
-const assignFromLabels = (
-  lines: LineInfo[],
-): Partial<Record<FuelType, FuelEvidence>> => {
-  const evidence: Partial<Record<FuelType, FuelEvidence>> = {};
+const extractFuelPricesFromText = (text: string): { prices: FuelPriceInput; confidence: number } => {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return { prices: {}, confidence: 0 };
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  const prices = extractAllPrices(lines);
+  const fuels = detectAllFuels(lines);
 
-    for (const fuelType of line.fuelHits) {
-      for (let offset = 0; offset <= 2; offset++) {
-        const candidateLine = lines[i + offset];
-        if (!candidateLine) continue;
+  const evidence: Partial<Record<FuelType, { value: number; score: number }>> = {};
 
-        const value = candidateLine.prices[0];
-        if (value == null) continue;
+  // 1) For each fuel hint, find the closest price (line distance)
+  for (const f of fuels) {
+    let best: { value: number; dist: number } | null = null;
+    for (const p of prices) {
+      const dist = Math.abs(p.lineIdx - f.lineIdx);
+      if (dist > 2) continue;
+      const onSame = p.lineIdx === f.lineIdx ? Math.abs(p.charIdx - f.charIdx) : 999;
+      const effectiveDist = onSame < 10 ? 0 : dist;
+      if (!best || effectiveDist < best.dist) {
+        best = { value: p.value, dist: effectiveDist };
+      }
+    }
 
-        const score = offset === 0 ? 0.98 : offset === 1 ? 0.90 : 0.82;
-
-        setBestEvidence(evidence, fuelType, {
-          value,
-          score,
-          source: offset === 0 ? 'label' : 'label_lookahead',
-          lineIndex: candidateLine.lineIndex,
-        });
-
-        break;
+    if (best) {
+      const matchScore = 0.9 * f.score * (best.dist === 0 ? 1 : best.dist === 1 ? 0.85 : 0.7);
+      const existing = evidence[f.type];
+      if (!existing || matchScore > existing.score) {
+        evidence[f.type] = { value: best.value, score: matchScore };
       }
     }
   }
 
-  return evidence;
-};
+  // 2) Fill missing by sorted-price ordering
+  const used = new Set(FUEL_ORDER.filter((ft) => evidence[ft]).map((ft) => evidence[ft]!.value));
+  const remaining = prices.filter((p) => !used.has(p.value)).map((p) => p.value);
+  remaining.sort((a, b) => a - b);
 
-const assignByOrder = (
-  lines: LineInfo[],
-  evidence: Partial<Record<FuelType, FuelEvidence>>,
-) => {
-  const allCandidates = [...new Set(lines.flatMap((line) => line.prices))].sort((a, b) => a - b);
-  if (allCandidates.length < 3) return evidence;
-
-  const desiredIndex: Record<FuelType, number> = {
-    diesel: 0,
-    regular: 1,
-    premium: 2,
-  };
-
-  for (const fuelType of FUEL_ORDER) {
-    if (evidence[fuelType]) continue;
-
-    const value = allCandidates[desiredIndex[fuelType]];
-    if (value == null) continue;
-
-    setBestEvidence(evidence, fuelType, {
-      value,
-      score: 0.55,
-      source: 'fallback_order',
-    });
-  }
-
-  return evidence;
-};
-
-const extractFuelPricesFromText = (text: string): { prices: FuelPriceInput; confidence: number } => {
-  const lines = buildLineInfo(text);
-
-  const evidence = assignFromLabels(lines);
-  assignByOrder(lines, evidence);
-
-  const prices: FuelPriceInput = {};
-  let totalScore = 0;
-
-  for (const fuelType of FUEL_ORDER) {
-    const hit = evidence[fuelType];
-    if (hit) {
-      prices[fuelType] = hit.value;
-      totalScore += hit.score;
+  let ri = 0;
+  for (const ft of FUEL_ORDER) {
+    if (evidence[ft]) continue;
+    if (ri < remaining.length) {
+      evidence[ft] = { value: remaining[ri++], score: 0.45 };
     }
   }
 
-  const confidence = totalScore / FUEL_ORDER.length;
-  return { prices, confidence };
+  // 3) Final fallback: no hints at all → order all prices by fuel order
+  const hasAnyFuel = fuels.length > 0;
+  if (!hasAnyFuel && prices.length >= 2) {
+    const sorted = [...new Set(prices.map((p) => p.value))].sort((a, b) => a - b);
+    for (let i = 0; i < FUEL_ORDER.length && i < sorted.length; i++) {
+      evidence[FUEL_ORDER[i]] = { value: sorted[i], score: 0.4 };
+    }
+  }
+
+  const result: FuelPriceInput = {};
+  for (const ft of FUEL_ORDER) {
+    if (evidence[ft]) result[ft] = evidence[ft]!.value;
+  }
+
+  return { prices: result, confidence: calculateConfidence(evidence) };
 };
 
 const OCR_SPACE_API_KEY = process.env.EXPO_PUBLIC_OCR_SPACE_API_KEY ?? '';

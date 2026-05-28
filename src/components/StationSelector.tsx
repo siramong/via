@@ -20,7 +20,6 @@ import type { StationMarker } from '../types';
 import type { RealtimeStation } from '../types';
 import type { Coordinates } from '../services/location';
 
-const OVERPASS_RADIUS = 2000;
 const SHEET_HEIGHT = 420;
 
 type Props = {
@@ -125,7 +124,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={styles.kbWrapper}
         >
           <Animated.View
@@ -166,7 +165,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
               <View style={styles.centerWrap}>
                 <Ionicons name="location-outline" size={32} color={colors.textMuted} />
                 <Text style={styles.centerText}>
-                  No gas stations found within {OVERPASS_RADIUS / 1000} km. Try a different area.
+                  No gas stations found nearby. Try a different location.
                 </Text>
               </View>
             )}
@@ -175,6 +174,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
               <FlatList
                 data={filtered}
                 keyExtractor={(item: RealtimeStation) => item.placeId}
+                keyboardShouldPersistTaps="handled"
                 style={styles.list}
                 contentContainerStyle={styles.listContent}
                 renderItem={({ item }: { item: RealtimeStation }) => {
@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   kbWrapper: {
+    flex: 1,
     justifyContent: 'flex-end',
   },
   sheet: {

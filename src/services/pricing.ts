@@ -48,10 +48,21 @@ export const getCheapestStation = async (coords: Coordinates): Promise<StationRe
 };
 
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+const OVERPASS_RADIUS = 50000;
 
 export const findNearbyRealStations = async (coords: Coordinates): Promise<RealtimeStation[]> => {
-  const query = `[out:json];node(around:2000,${coords.latitude},${coords.longitude})[amenity=fuel];out body 20;`;
-  const response = await fetch(`${OVERPASS_URL}?data=${encodeURIComponent(query)}`);
+  const query = `[out:json];node(around:${OVERPASS_RADIUS},${coords.latitude},${coords.longitude})[amenity=fuel];out body 50;`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  const response = await fetch(`${OVERPASS_URL}?data=${encodeURIComponent(query)}`, {
+    signal: controller.signal,
+    headers: {
+      'Accept': 'application/json',
+      'User-Agent': 'ViaApp/1.0',
+    },
+  });
+  clearTimeout(timer);
+
   if (!response.ok) throw new Error(`Overpass error: ${response.status}`);
 
   const json = await response.json();

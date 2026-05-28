@@ -1,5 +1,4 @@
-import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { uploadAsync, FileSystemUploadType, cacheDirectory, copyAsync } from 'expo-file-system/legacy';
 import type { FuelPriceInput, FuelType } from '../types';
 
 export type OcrOutput = {
@@ -224,56 +223,51 @@ const extractFuelPricesFromText = (text: string): { prices: FuelPriceInput; conf
 const OCR_SPACE_API_KEY = process.env.EXPO_PUBLIC_OCR_SPACE_API_KEY ?? '';
 const OCR_SPACE_URL = 'https://api.ocr.space/parse/image';
 
-const MAX_IMAGE_WIDTH = 1200;
-const MAX_IMAGE_HEIGHT = 1600;
-
-const resizeForOcr = async (uri: string): Promise<string> => {
-  const result = await manipulateAsync(uri, [{ resize: { width: MAX_IMAGE_WIDTH, height: MAX_IMAGE_HEIGHT } }], {
-    compress: 0.7,
-    format: SaveFormat.JPEG,
-  });
-  return result.uri;
-};
-
 const callOcrSpace = async (imageUri: string): Promise<string> => {
-  let base64Image: string;
-  try {
-    const resized = await resizeForOcr(imageUri);
-    base64Image = await readAsStringAsync(resized, {
-      encoding: EncodingType.Base64,
-    });
-  } catch (readErr) {
-    throw new Error(`Failed to read image file: ${formatError(readErr)}`);
-  }
-
   if (!OCR_SPACE_API_KEY) {
     throw new Error('OCR_SPACE_API_KEY not configured');
   }
 
-  const formData = new FormData();
-  formData.append('apikey', OCR_SPACE_API_KEY);
-  formData.append('OCREngine', '2');
-  formData.append('base64Image', base64Image);
+  // Copy content:// to file:// (uploadAsync needs file:// on Android)
+  let fileUri: string;
+  if (imageUri.startsWith('content://')) {
+    const dest = cacheDirectory + 'ocr_' + Date.now() + '.jpg';
+    try {
+      await copyAsync({ from: imageUri, to: dest });
+      fileUri = dest;
+    } catch (copyErr) {
+      throw new Error(`Failed to copy image: ${formatError(copyErr)}`);
+    }
+  } else {
+    fileUri = imageUri;
+  }
 
-  let response: Response;
+  let uploadResult;
   try {
-    response = await fetch(OCR_SPACE_URL, {
-      method: 'POST',
-      body: formData,
+    uploadResult = await uploadAsync(OCR_SPACE_URL, fileUri, {
+      httpMethod: 'POST',
+      uploadType: FileSystemUploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType: 'image/jpeg',
+      parameters: {
+        apikey: OCR_SPACE_API_KEY,
+        OCREngine: '2',
+        language: 'spa',
+        scale: 'true',
+        isTable: 'true',
+      },
     });
   } catch (fetchErr) {
     throw new Error(`OCR.space network error: ${formatError(fetchErr)}`);
   }
 
-  if (!response.ok) {
-    let body = '';
-    try { body = await response.text(); } catch {}
-    throw new Error(`OCR.space error ${response.status}: ${body.slice(0, 500)}`);
+  if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    throw new Error(`OCR.space error ${uploadResult.status}: ${uploadResult.body.slice(0, 500)}`);
   }
 
   let json: any;
   try {
-    json = await response.json();
+    json = JSON.parse(uploadResult.body);
   } catch (jsonErr) {
     throw new Error(`OCR.space invalid response: ${formatError(jsonErr)}`);
   }

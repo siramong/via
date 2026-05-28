@@ -75,7 +75,6 @@ export const ContributeScreen = () => {
         quality: 0.5,
         cameraType: ImagePicker.CameraType.back,
         allowsEditing: true,
-        aspect: [2, 3],
       });
 
       if (result.canceled) {

@@ -81,23 +81,19 @@ export const useUserStore = create<UserState>((set, get) => ({
       // First, try to get existing session
       const { data, error } = await supabase.auth.getSession();
       if (error) {
-        console.warn('[Auth] getSession error:', error.message);
         set({ status: 'error', error: error.message });
       } else {
         if (data.session) {
-          console.log('[Auth] Existing session found');
           set({ session: data.session, status: 'ready' });
           const profile = await ensureUserProfile(data.session);
           set({ profile });
         } else {
-          console.log('[Auth] No existing session');
           set({ status: 'ready' });
         }
       }
 
       // Set up listener for auth state changes
       const { data: authData } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
-        console.log('[Auth] State changed:', event, !!nextSession);
         set({ session: nextSession });
         if (nextSession) {
           const profile = await ensureUserProfile(nextSession);
@@ -112,7 +108,6 @@ export const useUserStore = create<UserState>((set, get) => ({
       };
     } catch (err) {
       const errorMsg = (err as Error).message;
-      console.error('[Auth] Bootstrap error:', errorMsg);
       set({ status: 'error', error: errorMsg });
       return () => {};
     }
@@ -125,7 +120,6 @@ export const useUserStore = create<UserState>((set, get) => ({
 
     set({ status: 'loading', error: null });
     const redirectTo = buildRedirectUrl();
-    console.log('[OAuth] Starting Google sign-in with redirectTo:', redirectTo);
     
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -140,13 +134,9 @@ export const useUserStore = create<UserState>((set, get) => ({
 
     if (error || !data?.url) {
       const errorMsg = error?.message ?? 'Unable to start Google sign-in.';
-      console.error('[OAuth] signInWithOAuth failed:', errorMsg);
       set({ status: 'error', error: errorMsg });
       return;
     }
-
-    console.log('[OAuth] OAuth URL:', data.url);
-    console.log('[OAuth] Opening browser for OAuth...');
     
     try {
       // In Expo Go, deep links don't work, so we can't get the URL back from WebBrowser
@@ -154,23 +144,19 @@ export const useUserStore = create<UserState>((set, get) => ({
       await WebBrowser.openBrowserAsync(data.url);
       
       // After browser closes, wait for onAuthStateChange to pick up the session
-      console.log('[OAuth] Browser closed, waiting for session...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Check if session was established
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session) {
-        console.log('[OAuth] Session found after OAuth');
         set({ session: sessionData.session, status: 'ready' });
         const profile = await ensureUserProfile(sessionData.session);
         set({ profile });
       } else {
-        console.warn('[OAuth] No session found after OAuth');
         set({ status: 'error', error: 'No session found. Try again.' });
       }
     } catch (err) {
       const errorMsg = (err as Error).message;
-      console.error('[OAuth] Exception:', errorMsg);
       set({ status: 'error', error: errorMsg });
     }
   },

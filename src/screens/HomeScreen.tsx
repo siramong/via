@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -14,15 +14,32 @@ import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
 import { getBestStation } from '../services/pricing';
 import { colors, spacing } from '../theme';
+import type { StationMarker } from '../types';
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
   const { coords, refresh, status: locationStatus } = useLocationStore();
   const { profile } = useUserStore();
   const [bestStationResult, setBestStationResult] = useState<any>(null);
+  const mapOffsetY = insets.top + spacing.xl + 40 + spacing.md + 260;
   const [refreshing, setRefreshing] = useState(false);
   const preferredFuel = profile?.preferred_fuel;
   const prevFuelRef = useRef(preferredFuel);
+
+  const bestStationMarkers = useMemo(() => {
+    if (!bestStationResult) return [];
+    return [{
+      stationId: bestStationResult.stationId,
+      name: bestStationResult.name,
+      latitude: bestStationResult.latitude,
+      longitude: bestStationResult.longitude,
+      distanceMeters: bestStationResult.distanceMeters,
+      price: bestStationResult.price,
+      fuelType: bestStationResult.fuelType,
+      trustScore: bestStationResult.trustScore,
+      freshness: bestStationResult.freshness,
+    } satisfies StationMarker];
+  }, [bestStationResult]);
 
   const loadBestStation = useCallback(async (isRefresh = false) => {
     if (!coords) return;
@@ -63,7 +80,7 @@ export const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
-      <MapBackground />
+      <MapBackground markers={bestStationMarkers} bestStationId={bestStationResult?.stationId} topContentOffset={mapOffsetY} />
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.xl }]}
         refreshControl={

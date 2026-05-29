@@ -14,6 +14,7 @@ type Props = {
   selectedStationId?: string;
   bestStationId?: string;
   mapRef?: React.MutableRefObject<any>;
+  topContentOffset?: number;
 };
 
 const LEAFLET_HTML = `
@@ -99,12 +100,30 @@ const LEAFLET_HTML = `
       map.flyTo([lat, lng], 14, { duration: 0.3 });
     }
 
+    function fitAll(points, topOffset) {
+      if (!points || points.length === 0) return;
+      if (points.length === 1) {
+        map.setView(points[0], 14, { animate: true, duration: 0.5 });
+        return;
+      }
+      var bounds = L.latLngBounds(points);
+      var opts = { maxZoom: 15, animate: true, duration: 0.5 };
+      if (topOffset) {
+        opts.paddingTopLeft = [60, topOffset];
+        opts.paddingBottomRight = [60, 60];
+      } else {
+        opts.padding = [60, 60];
+      }
+      map.fitBounds(bounds, opts);
+    }
+
     function handleMessage(data) {
       try {
         var msg = JSON.parse(data);
         if (msg.type === 'setMarkers') { selectedId = msg.selectedId || null; bestId = msg.bestId || null; setMarkers(msg.data); }
         if (msg.type === 'flyTo') flyTo(msg.lat, msg.lng);
         if (msg.type === 'setUserLocation') setUserLocation(msg.lat, msg.lng);
+        if (msg.type === 'fitAll') fitAll(msg.points, msg.topOffset);
       } catch(err) {}
     }
 
@@ -122,6 +141,7 @@ export const MapBackground = ({
   selectedStationId,
   bestStationId,
   mapRef: externalRef,
+  topContentOffset = 0,
 }: Props) => {
   const { coords } = useLocationStore();
   const webViewRef = useRef<WebView>(null);
@@ -177,6 +197,14 @@ export const MapBackground = ({
       setTimeout(() => flyToCoords(coords.latitude, coords.longitude), 200);
     }
   }, [coords, webviewReady, flyToCoords, sendUserLocation]);
+
+  useEffect(() => {
+    if (coords && markers.length > 0 && webviewReady) {
+      const points: Array<[number, number]> = markers.map(m => [m.latitude, m.longitude] as [number, number]);
+      points.push([coords.latitude, coords.longitude]);
+      setTimeout(() => postToWebview({ type: 'fitAll', points, topOffset: topContentOffset }), 500);
+    }
+  }, [coords, markers, webviewReady, postToWebview, topContentOffset]);
 
   mapRef.current = {
     animateToRegion: () => {},

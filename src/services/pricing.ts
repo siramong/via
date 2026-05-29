@@ -47,34 +47,98 @@ export const getCheapestStation = async (coords: Coordinates): Promise<StationRe
   };
 };
 
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
-const OVERPASS_RADIUS = 50000;
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+];
+const OVERPASS_RADIUS = 10000;
+const MAX_RESULTS = 15;
+const REQUEST_TIMEOUT = 8000;
+
+const haversineDistance = (a: Coordinates, b: { latitude: number; longitude: number }): number => {
+  const R = 6371000;
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
+  const dLng = ((b.longitude - a.longitude) * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+  const aVal =
+    sinDLat * sinDLat +
+    Math.cos((a.latitude * Math.PI) / 180) *
+      Math.cos((b.latitude * Math.PI) / 180) *
+      sinDLng * sinDLng;
+  return R * 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
+};
 
 export const findNearbyRealStations = async (coords: Coordinates): Promise<RealtimeStation[]> => {
-  const query = `[out:json];node(around:${OVERPASS_RADIUS},${coords.latitude},${coords.longitude})[amenity=fuel];out body 50;`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  const response = await fetch(`${OVERPASS_URL}?data=${encodeURIComponent(query)}`, {
-    signal: controller.signal,
-    headers: {
-      'Accept': 'application/json',
-      'User-Agent': 'ViaApp/1.0',
-    },
-  });
-  clearTimeout(timer);
+  const errors: string[] = [];
 
-  if (!response.ok) throw new Error(`Overpass error: ${response.status}`);
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const query = `[out:json];node(around:${OVERPASS_RADIUS},${coords.latitude},${coords.longitude})[amenity=fuel];out body 50;`;
 
-  const json = await response.json();
-  return (json.elements ?? []).map((el: any) => ({
-    placeId: `osm_${el.id}`,
-    name: el.tags?.name || el.tags?.brand || 'Gas Station',
-    latitude: el.lat,
-    longitude: el.lon,
-    address: el.tags?.['addr:street']
-      ? [el.tags['addr:street'], el.tags['addr:city']].filter(Boolean).join(', ')
-      : '',
-  }));
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      const response = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'ViaApp/1.0',
+        },
+      });
+      clearTimeout(timer);
+
+      if (!response.ok) {
+        const msg = `Overpass ${endpoint} returned ${response.status}`;
+        console.warn(`[Overpass] ${msg}`);
+        errors.push(msg);
+        continue;
+      }
+
+      const text = await response.text();
+      let json: any;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        const msg = `Overpass ${endpoint} returned invalid JSON`;
+        console.warn(`[Overpass] ${msg}`);
+        errors.push(msg);
+        continue;
+      }
+
+      const elements = json.elements;
+      if (!Array.isArray(elements) || elements.length === 0) continue;
+
+      const withDist: { el: any; dist: number }[] = [];
+      for (const el of elements) {
+        if (el.lat == null || el.lon == null) continue;
+        withDist.push({
+          el,
+          dist: haversineDistance(coords, { latitude: el.lat, longitude: el.lon }),
+        });
+      }
+
+      if (withDist.length === 0) continue;
+
+      withDist.sort((a, b) => a.dist - b.dist);
+      return withDist.slice(0, MAX_RESULTS).map(({ el }) => ({
+        placeId: `osm_${el.id}`,
+        name: el.tags?.name || el.tags?.brand || 'Gas Station',
+        latitude: el.lat,
+        longitude: el.lon,
+        address: el.tags?.['addr:street']
+          ? [el.tags['addr:street'], el.tags['addr:city']].filter(Boolean).join(', ')
+          : '',
+      }));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[Overpass] ${endpoint} error: ${msg}`);
+      errors.push(`${endpoint}: ${msg}`);
+    }
+  }
+
+  const debugInfo = `Tried ${OVERPASS_ENDPOINTS.length} endpoint(s) at ${OVERPASS_RADIUS / 1000}km radius.\nErrors:\n${errors.join('\n')}`;
+  console.warn(`[Overpass] All endpoints failed.\n${debugInfo}`);
+  throw new Error(`No stations found. ${debugInfo}`);
 };
 
 export const ensureStation = async (realStation: RealtimeStation): Promise<StationMarker> => {

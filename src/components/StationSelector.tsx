@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { findNearbyRealStations, ensureStation } from '../services/pricing';
+import { Button } from './ui/Button';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import type { StationMarker } from '../types';
 import type { RealtimeStation } from '../types';
@@ -65,23 +66,32 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
     ]).start();
   }, [translateY, backdropOpacity]);
 
-  useEffect(() => {
+  const loadStations = useCallback(async () => {
     if (!userCoords) {
       setLoading(false);
       setError('Location not available.');
       return;
     }
-
     setLoading(true);
     setError(null);
-    findNearbyRealStations(userCoords)
-      .then(setRealStations)
-      .catch((err) => {
-        setError((err as Error).message);
-        setRealStations([]);
-      })
-      .finally(() => setLoading(false));
+    setRealStations([]);
+    try {
+      const stations = await findNearbyRealStations(userCoords);
+      if (stations.length === 0) {
+        setError('No gas stations found within a large radius. Try a different location.');
+      } else {
+        setRealStations(stations);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }, [userCoords]);
+
+  useEffect(() => {
+    loadStations();
+  }, [loadStations]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return realStations;
@@ -99,15 +109,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
         const marker = await ensureStation(realStation);
         onSelect(marker);
       } catch {
-        onSelect({
-          stationId: `osm_${Date.now()}`,
-          name: realStation.name,
-          latitude: realStation.latitude,
-          longitude: realStation.longitude,
-          distanceMeters: userCoords
-            ? haversineDistance(userCoords, realStation)
-            : 0,
-        });
+        setError('Could not save this station. Ensure your database migrations are applied and try again.');
       } finally {
         setSavingId(null);
       }
@@ -130,91 +132,110 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
           <Animated.View
             style={[
               styles.sheet,
-              { transform: [{ translateY }], paddingBottom: insets.bottom + spacing.lg },
+              { transform: [{ translateY }] },
             ]}
           >
-            <View style={styles.handle} />
-            <Text style={styles.title}>Select station</Text>
-
-            <View style={styles.searchRow}>
-              <Ionicons name="search" size={16} color={colors.textMuted} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search nearby stations..."
-                placeholderTextColor={colors.textMuted}
-                value={search}
-                onChangeText={setSearch}
-              />
+            <View style={styles.headerSection}>
+              <View style={styles.handle} />
+              <Text style={styles.title}>Select station</Text>
+              <View style={styles.searchRow}>
+                <Ionicons name="search" size={16} color={colors.textMuted} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search nearby stations..."
+                  placeholderTextColor={colors.textMuted}
+                  value={search}
+                  onChangeText={setSearch}
+                />
+              </View>
             </View>
 
-            {loading && (
-              <View style={styles.centerWrap}>
-                <ActivityIndicator color={colors.primary} />
-                <Text style={styles.centerText}>Finding stations near you...</Text>
-              </View>
-            )}
+            <View style={styles.contentSection}>
+              {loading && (
+                <View style={styles.centerWrap}>
+                  <ActivityIndicator color={colors.primary} size="large" />
+                  <Text style={styles.centerText}>Scanning for nearby gas stations...</Text>
+                </View>
+              )}
 
-            {error && !loading && (
-              <View style={styles.centerWrap}>
-                <Ionicons name="alert-circle-outline" size={32} color={colors.danger} />
-                <Text style={[styles.centerText, { color: colors.danger }]}>{error}</Text>
-              </View>
-            )}
+              {error && !loading && (
+                <View style={styles.centerWrap}>
+                  <Ionicons name="alert-circle-outline" size={40} color={colors.danger} />
+                  <Text style={[styles.centerText, { color: colors.danger }]}>{error}</Text>
+                  <Button
+                    title="Retry"
+                    icon="refresh"
+                    variant="secondary"
+                    size="sm"
+                    onPress={loadStations}
+                    style={{ marginTop: spacing.md }}
+                  />
+                </View>
+              )}
 
-            {!loading && !error && !hasStations && (
-              <View style={styles.centerWrap}>
-                <Ionicons name="location-outline" size={32} color={colors.textMuted} />
-                <Text style={styles.centerText}>
-                  No gas stations found nearby. Try a different location.
-                </Text>
-              </View>
-            )}
+              {!loading && !error && !hasStations && (
+                <View style={styles.centerWrap}>
+                  <Ionicons name="location-outline" size={40} color={colors.textMuted} />
+                  <Text style={styles.centerText}>
+                    No gas stations found nearby. Try retrying or check your location.
+                  </Text>
+                  <Button
+                    title="Retry"
+                    icon="refresh"
+                    variant="secondary"
+                    size="sm"
+                    onPress={loadStations}
+                    style={{ marginTop: spacing.md }}
+                  />
+                </View>
+              )}
 
-            {!loading && hasStations && (
-              <FlatList
-                data={filtered}
-                keyExtractor={(item: RealtimeStation) => item.placeId}
-                keyboardShouldPersistTaps="handled"
-                style={styles.list}
-                contentContainerStyle={styles.listContent}
-                renderItem={({ item }: { item: RealtimeStation }) => {
-                  const isSaving = savingId === item.placeId;
-                  const dist = userCoords ? haversineDistance(userCoords, item) : 0;
-                  return (
-                    <Pressable
-                      style={[styles.station, isSaving && styles.stationSaving]}
-                      onPress={() => handleSelect(item)}
-                      disabled={isSaving}
-                    >
-                      <View style={styles.radio}>
-                        {isSaving ? (
-                          <ActivityIndicator size="small" color={colors.primary} />
-                        ) : (
-                          <Ionicons name="location" size={16} color={colors.textMuted} />
-                        )}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.stationName} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                        {item.address ? (
-                          <Text style={styles.stationAddress} numberOfLines={1}>
-                            {item.address}
-                          </Text>
-                        ) : null}
-                        <View style={styles.stationMeta}>
-                          <Ionicons name="navigate" size={12} color={colors.textMuted} />
-                          <Text style={styles.stationDist}>
-                            {formatDistance(dist)}
-                          </Text>
+              {!loading && hasStations && (
+                <FlatList
+                  data={filtered}
+                  keyExtractor={(item: RealtimeStation) => item.placeId}
+                  keyboardShouldPersistTaps="handled"
+                  style={styles.list}
+                  contentContainerStyle={styles.listContent}
+                  renderItem={({ item }: { item: RealtimeStation }) => {
+                    const isSaving = savingId === item.placeId;
+                    const dist = userCoords ? haversineDistance(userCoords, item) : 0;
+                    return (
+                      <Pressable
+                        style={[styles.station, isSaving && styles.stationSaving]}
+                        onPress={() => handleSelect(item)}
+                        disabled={isSaving}
+                      >
+                        <View style={styles.radio}>
+                          {isSaving ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                          ) : (
+                            <Ionicons name="location" size={16} color={colors.textMuted} />
+                          )}
                         </View>
-                      </View>
-                      <Ionicons name="add-circle" size={22} color={colors.primary} />
-                    </Pressable>
-                  );
-                }}
-              />
-            )}
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.stationName} numberOfLines={1}>
+                            {item.name}
+                          </Text>
+                          {item.address ? (
+                            <Text style={styles.stationAddress} numberOfLines={1}>
+                              {item.address}
+                            </Text>
+                          ) : null}
+                          <View style={styles.stationMeta}>
+                            <Ionicons name="navigate" size={12} color={colors.textMuted} />
+                            <Text style={styles.stationDist}>
+                              {formatDistance(dist)}
+                            </Text>
+                          </View>
+                        </View>
+                        <Ionicons name="add-circle" size={22} color={colors.primary} />
+                      </Pressable>
+                    );
+                  }}
+                />
+              )}
+            </View>
           </Animated.View>
         </KeyboardAvoidingView>
       </View>
@@ -236,12 +257,20 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    maxHeight: SHEET_HEIGHT,
+    height: SHEET_HEIGHT,
     backgroundColor: colors.card,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.lg,
+    paddingBottom: 0,
     ...shadows.lg,
+  },
+  headerSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  contentSection: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
   },
   handle: {
     width: 36,
@@ -319,8 +348,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   centerWrap: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.xl,
+    justifyContent: 'center',
     gap: spacing.sm,
   },
   centerText: {

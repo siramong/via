@@ -121,24 +121,53 @@ const extractFuelPricesFromText = (text: string): { prices: FuelPriceInput; conf
 
   const evidence: Partial<Record<FuelType, { value: number; score: number }>> = {};
 
-  // 1) For each fuel hint, find the closest price (line distance)
-  for (const f of fuels) {
-    let best: { value: number; dist: number } | null = null;
-    for (const p of prices) {
-      const dist = Math.abs(p.lineIdx - f.lineIdx);
-      if (dist > 2) continue;
-      const onSame = p.lineIdx === f.lineIdx ? Math.abs(p.charIdx - f.charIdx) : 999;
-      const effectiveDist = onSame < 10 ? 0 : dist;
-      if (!best || effectiveDist < best.dist) {
-        best = { value: p.value, dist: effectiveDist };
+  // Detect layout: are all fuel names before all prices? (block layout)
+  const fuelLines = fuels.map((f) => f.lineIdx);
+  const priceLines = prices.map((p) => p.lineIdx);
+  const isBlockLayout =
+    fuels.length > 0 && prices.length > 0 && Math.max(...fuelLines) < Math.min(...priceLines);
+
+  if (isBlockLayout) {
+    // Block layout: pair unique fuels and prices in order of appearance (1-to-1)
+    const uniqueFuels: FuelType[] = [];
+    const seenFuel = new Set<FuelType>();
+    for (const f of [...fuels].sort((a, b) => a.lineIdx - b.lineIdx || a.charIdx - b.charIdx)) {
+      if (!seenFuel.has(f.type)) {
+        seenFuel.add(f.type);
+        uniqueFuels.push(f.type);
       }
     }
 
-    if (best) {
-      const matchScore = 0.9 * f.score * (best.dist === 0 ? 1 : best.dist === 1 ? 0.85 : 0.7);
-      const existing = evidence[f.type];
-      if (!existing || matchScore > existing.score) {
-        evidence[f.type] = { value: best.value, score: matchScore };
+    const sortedPrices = [...prices].sort((a, b) => a.lineIdx - b.lineIdx || a.charIdx - b.charIdx);
+
+    for (let i = 0; i < uniqueFuels.length && i < sortedPrices.length; i++) {
+      evidence[uniqueFuels[i]] = { value: sortedPrices[i].value, score: 0.7 };
+    }
+  } else {
+    // Interleaved layout: proximity matching with price deduplication
+    const usedPriceKeys = new Set<string>();
+
+    for (const f of [...fuels].sort((a, b) => a.lineIdx - b.lineIdx || a.charIdx - b.charIdx)) {
+      let best: { value: number; dist: number; key: string } | null = null;
+      for (const p of prices) {
+        const priceKey = `${p.lineIdx}:${p.charIdx}`;
+        if (usedPriceKeys.has(priceKey)) continue;
+        const dist = Math.abs(p.lineIdx - f.lineIdx);
+        if (dist > 2) continue;
+        const onSame = p.lineIdx === f.lineIdx ? Math.abs(p.charIdx - f.charIdx) : 999;
+        const effectiveDist = onSame < 10 ? 0 : dist;
+        if (!best || effectiveDist < best.dist) {
+          best = { value: p.value, dist: effectiveDist, key: priceKey };
+        }
+      }
+
+      if (best) {
+        usedPriceKeys.add(best.key);
+        const matchScore = 0.9 * f.score * (best.dist === 0 ? 1 : best.dist === 1 ? 0.85 : 0.7);
+        const existing = evidence[f.type];
+        if (!existing || matchScore > existing.score) {
+          evidence[f.type] = { value: best.value, score: matchScore };
+        }
       }
     }
   }

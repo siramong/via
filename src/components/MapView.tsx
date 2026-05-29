@@ -81,13 +81,13 @@ const LEAFLET_HTML = `
         var textColor = isBest ? '#0B1020' : (isSelected ? '#0B1020' : '#4CC9F0');
         var iconColor = isBest ? '#0B1020' : (isSelected ? '#0B1020' : '#4CC9F0');
 
-        var starHtml = isBest ? '<span style="position:absolute;top:-8px;right:-8px;font-size:14px">\\u2B50</span>' : '';
-        var html = '<div style="position:relative">' + starHtml +
-          '<div style="background:' + bgBadge + ';border:1px solid ' + borderColor + ';border-radius:12px;padding:3px 8px;color:' + textColor + ';font-size:11px;font-weight:700;white-space:nowrap;margin-bottom:2px">' +
+        var starHtml = isBest ? '<span style="position:absolute;top:-8px;right:-8px;font-size:14px;z-index:1">\\u2B50</span>' : '';
+        var html = '<div style="display:flex;flex-direction:column;align-items:center;position:relative">' + starHtml +
+          '<div style="background:' + bgBadge + ';border:1px solid ' + borderColor + ';border-radius:12px;padding:3px 8px;color:' + textColor + ';font-size:11px;font-weight:700;white-space:nowrap">' +
           (m.price ? '$' + m.price.toFixed(2) : '?') +
-          '</div><div style="width:26px;height:26px;border-radius:13px;background:rgba(18,26,46,0.78);border:1.5px solid ' + borderColor + ';display:flex;align-items:center;justify-content:center;margin:0 auto"><svg viewBox="0 0 24 24" width="18" height="18" fill="' + iconColor + '"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div></div>';
+          '</div><div style="width:26px;height:26px;margin-top:2px;border-radius:13px;background:rgba(18,26,46,0.78);border:1.5px solid ' + borderColor + ';display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="' + iconColor + '"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div></div>';
 
-        var icon = L.divIcon({ className: '', html: html, iconSize: [80, 56], iconAnchor: [40, 56] });
+        var icon = L.divIcon({ className: '', html: html, iconSize: [120, 56], iconAnchor: [60, 56] });
         var marker = L.marker([m.latitude, m.longitude], { icon: icon }).addTo(map);
         marker.on('click', function() {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerPress', stationId: m.stationId }));

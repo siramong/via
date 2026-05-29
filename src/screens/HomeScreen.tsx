@@ -15,7 +15,7 @@ import { SkeletonCard } from '../components/ui/Skeleton';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
-import { getNearbyStations } from '../services/pricing';
+import { getBestStation, getNearbyStations } from '../services/pricing';
 import { colors, spacing } from '../theme';
 import type { StationMarker } from '../types';
 import type { FuelType } from '../types';
@@ -27,12 +27,13 @@ const computeBestScore = (
   let filtered = stations;
 
   if (preferredFuel) {
-    filtered = filtered.filter(
-      (s) => s.fuelType == null || s.fuelType === preferredFuel,
-    );
+    const preferred = stations.filter((s) => s.fuelType === preferredFuel && s.price != null);
+    if (preferred.length > 0) {
+      filtered = preferred;
+    }
   }
 
-  const withPrices = filtered.filter((s) => s.price != null);
+  const withPrices = filtered.filter((s) => s.price != null && s.fuelType != null);
   if (withPrices.length === 0) return [];
 
   const maxPrice = Math.max(...withPrices.map((s) => s.price!));
@@ -58,8 +59,35 @@ export const HomeScreen = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bestStationResult, setBestStationResult] = useState<any>(null);
   const preferredFuel = profile?.preferred_fuel;
   const prevFuelRef = useRef(preferredFuel);
+
+  const computeBestFrom = useCallback(async (stns: StationMarker[]) => {
+    if (!coords) return;
+    try {
+      const best = await getBestStation(coords, preferredFuel);
+      setBestStationResult(best);
+    } catch {
+      const withPrices = stns.filter((s) => s.price != null);
+      if (withPrices.length > 0) {
+        const best = withPrices.reduce((a, b) =>
+          (a.price ?? 0) < (b.price ?? 0) ? a : b,
+        );
+        setBestStationResult({
+          stationId: best.stationId,
+          name: best.name,
+          latitude: best.latitude,
+          longitude: best.longitude,
+          fuelType: best.fuelType ?? 'ecopais',
+          price: best.price!,
+          distanceMeters: best.distanceMeters,
+          trustScore: best.trustScore ?? 50,
+          freshness: best.freshness ?? 'stale',
+        });
+      }
+    }
+  }, [coords, preferredFuel]);
 
   const loadStations = useCallback(async (isRefresh = false) => {
     if (!coords) return;
@@ -72,6 +100,7 @@ export const HomeScreen = () => {
     try {
       const result = await getNearbyStations(coords);
       setStations(result);
+      void computeBestFrom(result);
     } catch (err) {
       const errMsg = (err as Error).message;
       if (!errMsg.includes('CORS') && !errMsg.includes('Failed to fetch')) {
@@ -81,7 +110,7 @@ export const HomeScreen = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [coords]);
+  }, [coords, computeBestFrom]);
 
   useEffect(() => {
     refresh().catch(() => {});
@@ -112,41 +141,11 @@ export const HomeScreen = () => {
     [stations, preferredFuel],
   );
 
-  const bestStation = processed.length > 0 ? processed[0] : null;
-
-  const bestStationResult = useMemo(() => {
-    if (!bestStation || bestStation.price == null) return null;
-    return {
-      stationId: bestStation.stationId,
-      name: bestStation.name,
-      fuelType: (bestStation.fuelType ?? 'regular') as FuelType,
-      price: bestStation.price!,
-      distanceMeters: bestStation.distanceMeters,
-      trustScore: bestStation.trustScore ?? 50,
-      freshness: (bestStation.freshness ?? 'stale') as any,
-    };
-  }, [bestStation]);
-
-  const remaining = useMemo(
-    () => processed.slice(1),
-    [processed],
-  );
-
   const noPrice = useMemo(() => {
-    let filtered = stations;
-    if (preferredFuel) {
-      filtered = filtered.filter(
-        (s) => s.fuelType == null || s.fuelType === preferredFuel,
-      );
-    }
-    return filtered.filter((s) => s.price == null);
-  }, [stations, preferredFuel]);
+    return stations.filter((s) => s.price == null);
+  }, [stations]);
 
   const handleStationPress = useCallback((station: StationMarker) => {
-    navigation.navigate('Map');
-  }, [navigation]);
-
-  const handleViewOnMap = useCallback(() => {
     navigation.navigate('Map');
   }, [navigation]);
 
@@ -157,7 +156,7 @@ export const HomeScreen = () => {
       <MapBackground />
       <FlatList
         contentContainerStyle={[styles.listContent, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + 120 }]}
-        data={remaining}
+        data={processed}
         keyExtractor={(item) => item.stationId}
         refreshControl={
           <RefreshControl
@@ -177,11 +176,7 @@ export const HomeScreen = () => {
             )}
             {bestStationResult && (
               <View style={styles.featuredCard}>
-                <FuelCard
-                  result={bestStationResult}
-                  locked={false}
-                  onViewOnMap={handleViewOnMap}
-                />
+                <FuelCard result={bestStationResult} />
               </View>
             )}
           </View>

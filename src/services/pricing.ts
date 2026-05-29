@@ -21,32 +21,6 @@ export const computeTrustScore = (weightSum: number, freshness: Freshness): numb
   return Math.min(100, Math.max(10, Math.round(weightSum * 4 + freshnessBoost)));
 };
 
-export const getCheapestStation = async (coords: Coordinates): Promise<StationResult | null> => {
-  const { data, error } = await supabase.rpc('get_cheapest_station', {
-    user_lat: coords.latitude,
-    user_lng: coords.longitude,
-  });
-
-  if (error) {
-    throw error;
-  }
-
-  const result = Array.isArray(data) ? data[0] : data;
-  if (!result) {
-    return null;
-  }
-
-  return {
-    stationId: result.station_id,
-    name: result.station_name,
-    fuelType: result.fuel_type,
-    price: Number(result.price),
-    distanceMeters: Number(result.distance_meters),
-    trustScore: Number(result.trust_score),
-    freshness: result.freshness,
-  };
-};
-
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
@@ -188,7 +162,9 @@ export const getBestStation = async (coords: Coordinates, preferredFuel?: FuelTy
   return {
     stationId: best.station.stationId,
     name: best.station.name,
-    fuelType: best.station.fuelType ?? 'regular',
+    latitude: best.station.latitude,
+    longitude: best.station.longitude,
+    fuelType: best.station.fuelType ?? 'ecopais',
     price: best.station.price!,
     distanceMeters: best.station.distanceMeters,
     trustScore: best.station.trustScore ?? 50,

@@ -8,10 +8,10 @@ export type OcrOutput = {
   error?: string;
 };
 
-const FUEL_ORDER: FuelType[] = ['regular', 'premium', 'diesel'];
+const FUEL_ORDER: FuelType[] = ['ecopais', 'super', 'diesel'];
 
 const fuelPatterns: Record<FuelType, [RegExp, number][]> = {
-  regular: [
+  ecopais: [
     [/\bregular\b/i, 1],
     [/\breg\b/i, 0.7],
     [/\bextra\b/i, 1],
@@ -21,7 +21,7 @@ const fuelPatterns: Record<FuelType, [RegExp, number][]> = {
     [/\brgl[ae]r\b/i, 0.7],
     [/\brgl\b/i, 0.5],
   ],
-  premium: [
+  super: [
     [/\bpremium\b/i, 1],
     [/\bprem\b/i, 0.7],
     [/\bsuper\b/i, 1],

@@ -184,7 +184,7 @@ export const ContributeScreen = () => {
   }, []);
 
   const hasPrices = Object.values(prices).some((v) => typeof v === 'number' && v > 0);
-  const allFuelTypes: FuelType[] = ['regular', 'premium', 'diesel'];
+  const allFuelTypes: FuelType[] = ['ecopais', 'super', 'diesel'];
 
   return (
     <View style={styles.container}>

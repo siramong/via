@@ -5,11 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { MapBackground } from '../components/MapView';
 import { MapSearchBar } from '../components/MapSearchBar';
 import { StationDetailSheet } from '../components/StationDetailSheet';
-import { Button } from '../components/ui/Button';
 import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
 import { getBestStation, getNearbyStations } from '../services/pricing';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing } from '../theme';
 import type { StationMarker } from '../types';
 
 export const MapScreen = () => {
@@ -37,14 +36,13 @@ export const MapScreen = () => {
 
     if (accessRemaining <= 0) {
       setLocked(true);
-      loaded.current = false;
-      return;
+    } else {
+      setLocked(false);
     }
 
     if (loaded.current) return;
     loaded.current = true;
 
-    setLocked(false);
     setLoading(true);
 
     getNearbyStations(coords)
@@ -60,7 +58,9 @@ export const MapScreen = () => {
       })
       .finally(() => setLoading(false));
 
-    consumeAccess().catch(() => {});
+    if (accessRemaining > 0) {
+      consumeAccess().catch(() => {});
+    }
   }, [coords, accessRemaining, consumeAccess, preferredFuel]);
 
   const handleRefreshMarkers = useCallback(() => {
@@ -89,16 +89,18 @@ export const MapScreen = () => {
     }
 
     if (preferredFuel) {
-      result = result.filter((m) => m.fuelType == null || m.fuelType === preferredFuel);
+      const preferred = allMarkers.filter((m) => m.fuelType === preferredFuel);
+      if (preferred.length > 0) {
+        result = preferred;
+      }
     }
 
     return result;
   }, [allMarkers, search, preferredFuel]);
 
   const handleMarkerPress = useCallback((station: StationMarker) => {
-    if (locked) return;
     setSelectedStation(station);
-  }, [locked]);
+  }, []);
 
   const handleCloseSheet = useCallback(() => {
     setSelectedStation(null);
@@ -112,7 +114,7 @@ export const MapScreen = () => {
     <View style={styles.container}>
       <MapBackground
         mapRef={mapRef}
-        interactive={!locked}
+        interactive
         markers={filteredMarkers}
         onMarkerPress={handleMarkerPress}
         selectedStationId={selectedStation?.stationId}
@@ -131,27 +133,17 @@ export const MapScreen = () => {
         </View>
       )}
       {locked && (
-        <View style={styles.lockedOverlay} pointerEvents="box-none">
-          <View style={styles.lockedWrap}>
-            <View style={styles.lockedIcon}>
-              <Ionicons name="lock-closed" size={28} color={colors.warning} />
-            </View>
-            <Text style={styles.lockedTitle}>Access locked</Text>
-            <Text style={styles.lockedSubtitle}>
-              Contribute a fuel price to earn more map views.
-            </Text>
-            <Button
-              title="Contribute now"
-              icon="camera"
-              variant="primary"
-              onPress={handleContribute}
-              size="md"
-              style={{ alignSelf: 'stretch' }}
-            />
-          </View>
+        <View style={styles.lockedBanner}>
+          <Ionicons name="lock-closed" size={14} color={colors.warning} />
+          <Text style={styles.lockedBannerText}>
+            Access locked — contribute to search & refresh
+          </Text>
+          <Pressable onPress={handleContribute} style={styles.lockedBannerBtn}>
+            <Text style={styles.lockedBannerBtnText}>Contribute</Text>
+          </Pressable>
         </View>
       )}
-      {!locked && <StationDetailSheet station={selectedStation} onClose={handleCloseSheet} />}
+      <StationDetailSheet station={selectedStation} onClose={handleCloseSheet} />
       {!locked && (
         <Pressable style={styles.refreshBtn} onPress={handleRefreshMarkers}>
           <Ionicons name="refresh" size={18} color={colors.primary} />
@@ -177,42 +169,36 @@ const styles = StyleSheet.create({
     marginLeft: -20,
     marginTop: -20,
   },
-  lockedOverlay: {
-    ...StyleSheet.absoluteFill,
-    justifyContent: 'center',
+  lockedBanner: {
+    position: 'absolute',
+    top: 60,
+    left: spacing.md,
+    right: spacing.md,
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(5, 8, 18, 0.6)',
+    gap: spacing.sm,
+    backgroundColor: colors.warningLight,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     zIndex: 50,
   },
-  lockedWrap: {
-    left: spacing.lg,
-    right: spacing.lg,
-    alignItems: 'center',
-    backgroundColor: colors.glass,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
-    maxWidth: 320,
+  lockedBannerText: {
+    color: colors.warning,
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
-  lockedIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.warningLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+  lockedBannerBtn: {
+    backgroundColor: colors.warning,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  lockedTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
-  },
-  lockedSubtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
+  lockedBannerBtnText: {
+    color: '#0B1020',
+    fontSize: 12,
+    fontWeight: '700',
   },
   refreshBtn: {
     position: 'absolute',

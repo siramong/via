@@ -138,7 +138,7 @@ export const ProfileScreen = () => {
             Select the fuel type your vehicle uses. Stations will show prices for your preferred fuel first.
           </Text>
           <Animated.View style={[styles.fuelOptions, { transform: [{ scale: fuelOptionScale.scale }] }]}>
-            {([null, 'regular', 'premium', 'diesel'] as const).map((fuel) => {
+            {([null, 'ecopais', 'super', 'diesel'] as const).map((fuel) => {
               const selected = profile.preferred_fuel === fuel;
               const label = fuel ? FUEL_DISPLAY[fuel] : 'All types';
               return (

@@ -1,4 +1,4 @@
-export type FuelType = 'regular' | 'premium' | 'diesel';
+export type FuelType = 'ecopais' | 'super' | 'diesel';
 
 export type FuelPriceInput = Partial<Record<FuelType, number>>;
 
@@ -7,6 +7,8 @@ export type Freshness = 'fresh' | 'recent' | 'stale';
 export type StationResult = {
   stationId: string;
   name: string;
+  latitude: number;
+  longitude: number;
   fuelType: FuelType;
   price: number;
   distanceMeters: number;

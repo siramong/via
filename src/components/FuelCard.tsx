@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, Linking, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { colors, radius, shadows, spacing, typography } from '../theme';
@@ -9,9 +9,6 @@ import type { Freshness, StationResult } from '../types';
 
 type Props = {
   result: StationResult | null;
-  locked: boolean;
-  onViewOnMap?: () => void;
-  onContribute?: () => void;
 };
 
 const formatDistance = (meters: number) => {
@@ -25,7 +22,7 @@ const freshnessBadge = (freshness: Freshness) => {
   return { variant: 'neutral' as const, icon: 'alert-circle' as const };
 };
 
-export const FuelCard = ({ result, locked, onViewOnMap, onContribute }: Props) => {
+export const FuelCard = ({ result }: Props) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
 
@@ -52,15 +49,19 @@ export const FuelCard = ({ result, locked, onViewOnMap, onContribute }: Props) =
 
   const fb = freshnessBadge(result.freshness);
 
+  const openMaps = () => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${result.latitude},${result.longitude}`;
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const handleShare = () => {
+    Share.share({
+      message: `⛽ ${result.name}\n📍 ${result.fuelType.toUpperCase()} — $${result.price.toFixed(2)}\n📏 ${formatDistance(result.distanceMeters)} away`,
+    }).catch(() => {});
+  };
+
   return (
     <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
-      {locked ? (
-        <View style={styles.lockedBanner}>
-          <Ionicons name="lock-closed" size={14} color={colors.warning} />
-          <Text style={styles.lockedBannerText}>Access locked — contribute to view on map</Text>
-        </View>
-      ) : null}
-
       <View style={styles.topRow}>
         <Text style={styles.label}>Best Station</Text>
         <Badge variant="info" label={`Trust ${result.trustScore}`} icon="shield-checkmark" />
@@ -87,14 +88,10 @@ export const FuelCard = ({ result, locked, onViewOnMap, onContribute }: Props) =
 
       <View style={styles.divider} />
 
-      <Button
-        title="View on Map"
-        icon="map"
-        variant={locked ? 'secondary' : 'secondary'}
-        size="sm"
-        onPress={locked ? onContribute : onViewOnMap}
-        style={{ alignSelf: 'stretch', opacity: locked ? 0.5 : 1 }}
-      />
+      <View style={styles.actionRow}>
+        <Button title="Navigate" icon="navigate" variant="primary" size="sm" onPress={openMaps} style={{ flex: 1 }} />
+        <Button title="Share" icon="share-outline" variant="secondary" size="sm" onPress={handleShare} style={{ flex: 1 }} />
+      </View>
     </Animated.View>
   );
 };
@@ -163,6 +160,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     marginVertical: spacing.md,
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
   emptyWrap: {
     alignItems: 'center',
     paddingVertical: spacing.md,
@@ -184,21 +185,5 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     marginTop: spacing.xs,
-  },
-  lockedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.warningLight,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  lockedBannerText: {
-    color: colors.warning,
-    fontSize: 11,
-    fontWeight: '600',
-    flex: 1,
   },
 });

@@ -52,34 +52,17 @@ export const FuelCard = ({ result, locked, onViewOnMap, onContribute }: Props) =
 
   const fb = freshnessBadge(result.freshness);
 
-  if (locked) {
-    return (
-      <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
-        <View style={styles.lockedWrap}>
-          <View style={styles.lockedIcon}>
-            <Ionicons name="lock-closed" size={24} color={colors.warning} />
-          </View>
-          <Text style={styles.lockedTitle}>Access locked</Text>
-          <Text style={styles.lockedSubtitle}>
-            You've used all your access points. Contribute a fuel price to earn more.
-          </Text>
-          <Button
-            title="Contribute now"
-            icon="camera"
-            variant="primary"
-            onPress={onContribute}
-            size="md"
-            style={{ alignSelf: 'stretch' }}
-          />
-        </View>
-      </Animated.View>
-    );
-  }
-
   return (
     <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
+      {locked ? (
+        <View style={styles.lockedBanner}>
+          <Ionicons name="lock-closed" size={14} color={colors.warning} />
+          <Text style={styles.lockedBannerText}>Access locked — contribute to view on map</Text>
+        </View>
+      ) : null}
+
       <View style={styles.topRow}>
-        <Text style={styles.label}>Cheapest Station</Text>
+        <Text style={styles.label}>Best Station</Text>
         <Badge variant="info" label={`Trust ${result.trustScore}`} icon="shield-checkmark" />
       </View>
 
@@ -107,10 +90,10 @@ export const FuelCard = ({ result, locked, onViewOnMap, onContribute }: Props) =
       <Button
         title="View on Map"
         icon="map"
-        variant="secondary"
+        variant={locked ? 'secondary' : 'secondary'}
         size="sm"
-        onPress={onViewOnMap}
-        style={{ alignSelf: 'stretch' }}
+        onPress={locked ? onContribute : onViewOnMap}
+        style={{ alignSelf: 'stretch', opacity: locked ? 0.5 : 1 }}
       />
     </Animated.View>
   );
@@ -202,29 +185,20 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
-  lockedWrap: {
+  lockedBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
     gap: spacing.sm,
-  },
-  lockedIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
     backgroundColor: colors.warningLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.md,
   },
-  lockedTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
-  },
-  lockedSubtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: spacing.sm,
+  lockedBannerText: {
+    color: colors.warning,
+    fontSize: 11,
+    fontWeight: '600',
+    flex: 1,
   },
 });

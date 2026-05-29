@@ -40,6 +40,7 @@ export type UserProfile = {
   display_name: string | null;
   reputation: number;
   access_remaining: number;
+  preferred_fuel: FuelType | null;
   created_at: string;
 };
 

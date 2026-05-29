@@ -77,8 +77,8 @@ const AppTabs = () => {
       name="Home"
       component={HomeScreen}
       options={{
-        title: 'Cheapest',
-        tabBarLabel: 'Cheapest',
+        title: 'Best',
+        tabBarLabel: 'Best',
       }}
     />
     <Tab.Screen

@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import type { Coordinates } from './location';
-import type { Freshness, RealtimeStation, StationMarker, StationResult } from '../types';
+import type { Freshness, FuelType, RealtimeStation, StationMarker, StationResult } from '../types';
 
 export const classifyFreshness = (createdAt: string): Freshness => {
   const ageHours = (Date.now() - new Date(createdAt).getTime()) / 36e5;
@@ -162,9 +162,14 @@ export const ensureStation = async (realStation: RealtimeStation): Promise<Stati
   };
 };
 
-export const getBestStation = async (coords: Coordinates): Promise<StationResult | null> => {
+export const getBestStation = async (coords: Coordinates, preferredFuel?: FuelType | null): Promise<StationResult | null> => {
   const stations = await getNearbyStations(coords);
-  const withPrices = stations.filter((s) => s.price != null);
+  let withPrices = stations.filter((s) => s.price != null);
+
+  if (preferredFuel) {
+    withPrices = withPrices.filter((s) => s.fuelType === preferredFuel);
+  }
+
   if (withPrices.length === 0) return null;
 
   const maxPrice = Math.max(...withPrices.map((s) => s.price!));

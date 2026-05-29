@@ -1,34 +1,67 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
+  FlatList,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { MapBackground } from '../components/MapView';
 import { FuelCard } from '../components/FuelCard';
+import { MapBackground } from '../components/MapView';
+import { StationListItem } from '../components/StationListItem';
 import { SkeletonCard } from '../components/ui/Skeleton';
+import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
-import { getBestStation } from '../services/pricing';
+import { getNearbyStations } from '../services/pricing';
 import { colors, spacing } from '../theme';
-import type { StationResult } from '../types';
+import type { StationMarker } from '../types';
+import type { FuelType } from '../types';
+
+const computeBestScore = (
+  stations: StationMarker[],
+  preferredFuel: FuelType | null | undefined,
+): StationMarker[] => {
+  let filtered = stations;
+
+  if (preferredFuel) {
+    filtered = filtered.filter(
+      (s) => s.fuelType == null || s.fuelType === preferredFuel,
+    );
+  }
+
+  const withPrices = filtered.filter((s) => s.price != null);
+  if (withPrices.length === 0) return [];
+
+  const maxPrice = Math.max(...withPrices.map((s) => s.price!));
+  const maxDist = Math.max(...withPrices.map((s) => s.distanceMeters));
+
+  const scored = withPrices.map((s) => ({
+    ...s,
+    bestScore:
+      0.6 * (maxPrice > 0 ? 1 - s.price! / maxPrice : 0.5) +
+      0.4 * (maxDist > 0 ? 1 - s.distanceMeters / maxDist : 0.5),
+  }));
+
+  scored.sort((a, b) => b.bestScore - a.bestScore);
+  return scored;
+};
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
-  const { coords, refresh, status: locationStatus, error: locationError } = useLocationStore();
-  const { profile, consumeAccess } = useUserStore();
+  const { coords, refresh, status: locationStatus } = useLocationStore();
+  const { profile } = useUserStore();
   const navigation = useNavigation<any>();
-  const [result, setResult] = useState<StationResult | null>(null);
+  const [stations, setStations] = useState<StationMarker[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const preferredFuel = profile?.preferred_fuel;
+  const prevFuelRef = useRef(preferredFuel);
 
-  const loadCheapest = useCallback(async (isRefresh = false) => {
+  const loadStations = useCallback(async (isRefresh = false) => {
     if (!coords) return;
     if (isRefresh) {
       setRefreshing(true);
@@ -37,11 +70,8 @@ export const HomeScreen = () => {
     }
     setError(null);
     try {
-      const station = await getBestStation(coords);
-      setResult(station);
-      if (profile && profile.access_remaining > 0) {
-        await consumeAccess();
-      }
+      const result = await getNearbyStations(coords);
+      setStations(result);
     } catch (err) {
       const errMsg = (err as Error).message;
       if (!errMsg.includes('CORS') && !errMsg.includes('Failed to fetch')) {
@@ -51,7 +81,7 @@ export const HomeScreen = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [coords, consumeAccess, profile]);
+  }, [coords]);
 
   useEffect(() => {
     refresh().catch(() => {});
@@ -59,31 +89,76 @@ export const HomeScreen = () => {
 
   useEffect(() => {
     if (coords) {
-      void loadCheapest();
+      void loadStations();
     }
-  }, [coords, loadCheapest]);
+  }, [coords, loadStations]);
+
+  useEffect(() => {
+    if (preferredFuel !== prevFuelRef.current) {
+      prevFuelRef.current = preferredFuel;
+      if (coords) {
+        void loadStations();
+      }
+    }
+  }, [preferredFuel, coords, loadStations]);
 
   const handleRefresh = useCallback(() => {
     refresh().catch(() => {});
-    void loadCheapest(true);
-  }, [refresh, loadCheapest]);
+    void loadStations(true);
+  }, [refresh, loadStations]);
+
+  const processed = useMemo(
+    () => computeBestScore(stations, preferredFuel),
+    [stations, preferredFuel],
+  );
+
+  const bestStation = processed.length > 0 ? processed[0] : null;
+
+  const bestStationResult = useMemo(() => {
+    if (!bestStation || bestStation.price == null) return null;
+    return {
+      stationId: bestStation.stationId,
+      name: bestStation.name,
+      fuelType: (bestStation.fuelType ?? 'regular') as FuelType,
+      price: bestStation.price!,
+      distanceMeters: bestStation.distanceMeters,
+      trustScore: bestStation.trustScore ?? 50,
+      freshness: (bestStation.freshness ?? 'stale') as any,
+    };
+  }, [bestStation]);
+
+  const remaining = useMemo(
+    () => processed.slice(1),
+    [processed],
+  );
+
+  const noPrice = useMemo(() => {
+    let filtered = stations;
+    if (preferredFuel) {
+      filtered = filtered.filter(
+        (s) => s.fuelType == null || s.fuelType === preferredFuel,
+      );
+    }
+    return filtered.filter((s) => s.price == null);
+  }, [stations, preferredFuel]);
+
+  const handleStationPress = useCallback((station: StationMarker) => {
+    navigation.navigate('Map');
+  }, [navigation]);
 
   const handleViewOnMap = useCallback(() => {
     navigation.navigate('Map');
   }, [navigation]);
 
-  const handleContribute = useCallback(() => {
-    navigation.navigate('Contribute');
-  }, [navigation]);
-
-  const locked = (profile?.access_remaining ?? 0) === 0;
   const showSkeleton = loading || locationStatus === 'loading';
 
   return (
     <View style={styles.container}>
       <MapBackground />
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
+      <FlatList
+        contentContainerStyle={[styles.listContent, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + 120 }]}
+        data={remaining}
+        keyExtractor={(item) => item.stationId}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -92,23 +167,56 @@ export const HomeScreen = () => {
             colors={[colors.primary]}
           />
         }
-      >
-        {showSkeleton ? (
-          <SkeletonCard />
-        ) : (
-          <FuelCard
-            result={result}
-            locked={locked}
-            onViewOnMap={handleViewOnMap}
-            onContribute={handleContribute}
-          />
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.title}>Best nearby</Text>
+            {preferredFuel && (
+              <Text style={styles.filterHint}>
+                Showing {FUEL_DISPLAY[preferredFuel]}
+              </Text>
+            )}
+            {bestStationResult && (
+              <View style={styles.featuredCard}>
+                <FuelCard
+                  result={bestStationResult}
+                  locked={false}
+                  onViewOnMap={handleViewOnMap}
+                />
+              </View>
+            )}
+          </View>
+        }
+        renderItem={({ item, index }) => (
+          <StationListItem station={item} rank={index} onPress={handleStationPress} />
         )}
-        {!!locationError && <Text style={styles.error}>{locationError}</Text>}
-        {!!error && !error.includes('CORS') && <Text style={styles.error}>{error}</Text>}
-        {!coords && !loading && (
-          <Text style={styles.hint}>Enable location to find cheapest fuel</Text>
-        )}
-      </ScrollView>
+        ListEmptyComponent={
+          showSkeleton ? (
+            <View style={styles.skeletonWrap}>
+              <SkeletonCard />
+            </View>
+          ) : (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>
+                {error ? 'Could not load stations' : 'No stations found'}
+              </Text>
+              {!!error && <Text style={styles.emptySub}>{error}</Text>}
+            </View>
+          )
+        }
+        ListFooterComponent={
+          noPrice.length > 0 ? (
+            <View style={styles.noPriceSection}>
+              <Text style={styles.noPriceTitle}>
+                {noPrice.length} station{noPrice.length > 1 ? 's' : ''} without recent prices
+              </Text>
+            </View>
+          ) : null
+        }
+        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+      />
+      {!coords && !loading && (
+        <Text style={styles.hint}>Enable location to find the best fuel prices</Text>
+      )}
     </View>
   );
 };
@@ -118,21 +226,61 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'flex-end',
+  listContent: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: 96,
+    paddingBottom: spacing.xxl,
   },
-  error: {
-    color: colors.danger,
-    marginTop: spacing.md,
+  header: {
+    marginBottom: spacing.lg,
+  },
+  title: {
+    color: colors.textPrimary,
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  filterHint: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: spacing.xs,
+  },
+  skeletonWrap: {
+    marginTop: spacing.lg,
+  },
+  empty: {
+    alignItems: 'center',
+    marginTop: spacing.xl,
+    paddingVertical: spacing.xl,
+  },
+  emptyTitle: {
+    color: colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySub: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: spacing.sm,
     textAlign: 'center',
-    fontSize: 14,
+  },
+  noPriceSection: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  noPriceTitle: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  featuredCard: {
+    marginTop: spacing.md,
   },
   hint: {
     color: colors.textSecondary,
-    marginTop: spacing.md,
+    position: 'absolute',
+    bottom: 120,
+    left: 0,
+    right: 0,
     textAlign: 'center',
     fontSize: 14,
     fontStyle: 'italic',

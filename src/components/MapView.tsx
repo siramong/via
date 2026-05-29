@@ -12,6 +12,7 @@ type Props = {
   markers?: StationMarker[];
   onMarkerPress?: (station: StationMarker) => void;
   selectedStationId?: string;
+  bestStationId?: string;
   mapRef?: React.MutableRefObject<any>;
 };
 
@@ -26,6 +27,27 @@ const LEAFLET_HTML = `
     * { margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
     #map { width: 100%; height: 100%; }
+    @keyframes pulse-dot {
+      0% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.4); opacity: 0.4; }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+    .user-loc-pulse {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: rgba(76, 201, 240, 0.25);
+      position: absolute;
+      top: -12px; left: -12px;
+      animation: pulse-dot 2s infinite;
+    }
+    .user-loc-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #4CC9F0;
+      border: 2px solid #0B1020;
+      position: absolute;
+      top: -6px; left: -6px;
+    }
   </style>
 </head>
 <body>
@@ -35,7 +57,16 @@ const LEAFLET_HTML = `
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
 
     var markers = {};
+    var userMarker = null;
     var selectedId = null;
+    var bestId = null;
+
+    function setUserLocation(lat, lng) {
+      if (userMarker) { map.removeLayer(userMarker); }
+      var html = '<div style="position:relative"><div class="user-loc-pulse"></div><div class="user-loc-dot"></div></div>';
+      var icon = L.divIcon({ className: '', html: html, iconSize: [24, 24], iconAnchor: [12, 12] });
+      userMarker = L.marker([lat, lng], { icon: icon, zIndexOffset: 1000 }).addTo(map);
+    }
 
     function setMarkers(data) {
       for (var id in markers) { map.removeLayer(markers[id]); }
@@ -43,16 +74,19 @@ const LEAFLET_HTML = `
 
       data.forEach(function(m) {
         var isSelected = m.stationId === selectedId;
-        var borderColor = isSelected ? '#35D07F' : '#4CC9F0';
-        var bgBadge = isSelected ? '#35D07F' : '#121A2E';
-        var textColor = isSelected ? '#0B1020' : '#4CC9F0';
-        var iconColor = isSelected ? '#0B1020' : '#4CC9F0';
+        var isBest = m.stationId === bestId;
+        var borderColor = isBest ? '#FFD700' : (isSelected ? '#35D07F' : '#4CC9F0');
+        var bgBadge = isBest ? '#FFD700' : (isSelected ? '#35D07F' : '#121A2E');
+        var textColor = isBest ? '#0B1020' : (isSelected ? '#0B1020' : '#4CC9F0');
+        var iconColor = isBest ? '#0B1020' : (isSelected ? '#0B1020' : '#4CC9F0');
 
-        var html = '<div style="background:' + bgBadge + ';border:1px solid ' + borderColor + ';border-radius:12px;padding:3px 8px;color:' + textColor + ';font-size:11px;font-weight:700;white-space:nowrap;margin-bottom:2px">' +
+        var starHtml = isBest ? '<span style="position:absolute;top:-8px;right:-8px;font-size:14px">\\u2B50</span>' : '';
+        var html = '<div style="position:relative">' + starHtml +
+          '<div style="background:' + bgBadge + ';border:1px solid ' + borderColor + ';border-radius:12px;padding:3px 8px;color:' + textColor + ';font-size:11px;font-weight:700;white-space:nowrap;margin-bottom:2px">' +
           (m.price ? '$' + m.price.toFixed(2) : '?') +
-          '</div><div style="width:26px;height:26px;border-radius:13px;background:rgba(18,26,46,0.78);border:1.5px solid ' + borderColor + ';display:flex;align-items:center;justify-content:center;margin:0 auto"><svg viewBox="0 0 24 24" width="18" height="18" fill="' + iconColor + '"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>';
+          '</div><div style="width:26px;height:26px;border-radius:13px;background:rgba(18,26,46,0.78);border:1.5px solid ' + borderColor + ';display:flex;align-items:center;justify-content:center;margin:0 auto"><svg viewBox="0 0 24 24" width="18" height="18" fill="' + iconColor + '"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div></div>';
 
-        var icon = L.divIcon({ className: '', html: html, iconSize: [80, 50], iconAnchor: [40, 50] });
+        var icon = L.divIcon({ className: '', html: html, iconSize: [80, 56], iconAnchor: [40, 56] });
         var marker = L.marker([m.latitude, m.longitude], { icon: icon }).addTo(map);
         marker.on('click', function() {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerPress', stationId: m.stationId }));
@@ -68,8 +102,9 @@ const LEAFLET_HTML = `
     function handleMessage(data) {
       try {
         var msg = JSON.parse(data);
-        if (msg.type === 'setMarkers') { selectedId = msg.selectedId || null; setMarkers(msg.data); }
+        if (msg.type === 'setMarkers') { selectedId = msg.selectedId || null; bestId = msg.bestId || null; setMarkers(msg.data); }
         if (msg.type === 'flyTo') flyTo(msg.lat, msg.lng);
+        if (msg.type === 'setUserLocation') setUserLocation(msg.lat, msg.lng);
       } catch(err) {}
     }
 
@@ -85,6 +120,7 @@ export const MapBackground = ({
   markers = [],
   onMarkerPress,
   selectedStationId,
+  bestStationId,
   mapRef: externalRef,
 }: Props) => {
   const { coords } = useLocationStore();
@@ -94,6 +130,8 @@ export const MapBackground = ({
   const [webviewReady, setWebviewReady] = useState(false);
   const markersRef = useRef(markers);
   markersRef.current = markers;
+  const bestIdRef = useRef(bestStationId);
+  bestIdRef.current = bestStationId;
 
   const postToWebview = useCallback((msg: object) => {
     if (webViewRef.current) {
@@ -103,12 +141,16 @@ export const MapBackground = ({
 
   const sendMarkers = useCallback(() => {
     if (markersRef.current.length > 0) {
-      postToWebview({ type: 'setMarkers', data: markersRef.current, selectedId: selectedStationId });
+      postToWebview({ type: 'setMarkers', data: markersRef.current, selectedId: selectedStationId, bestId: bestIdRef.current });
     }
   }, [postToWebview, selectedStationId]);
 
   const flyToCoords = useCallback((lat: number, lng: number) => {
     postToWebview({ type: 'flyTo', lat, lng });
+  }, [postToWebview]);
+
+  const sendUserLocation = useCallback((lat: number, lng: number) => {
+    postToWebview({ type: 'setUserLocation', lat, lng });
   }, [postToWebview]);
 
   useEffect(() => {
@@ -124,10 +166,17 @@ export const MapBackground = ({
   }, [selectedStationId, webviewReady, sendMarkers]);
 
   useEffect(() => {
+    if (webviewReady && bestStationId) {
+      sendMarkers();
+    }
+  }, [bestStationId, webviewReady, sendMarkers]);
+
+  useEffect(() => {
     if (coords && webviewReady) {
+      sendUserLocation(coords.latitude, coords.longitude);
       setTimeout(() => flyToCoords(coords.latitude, coords.longitude), 200);
     }
-  }, [coords, webviewReady, flyToCoords]);
+  }, [coords, webviewReady, flyToCoords, sendUserLocation]);
 
   mapRef.current = {
     animateToRegion: () => {},

@@ -8,6 +8,7 @@ type Props = {
   variant?: BadgeVariant;
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
+  size?: 'sm' | 'md';
   style?: ViewStyle;
 };
 
@@ -19,13 +20,13 @@ const variantConfig: Record<BadgeVariant, { bg: string; text: string }> = {
   neutral: { bg: colors.surface1, text: colors.textSecondary },
 };
 
-export const Badge = ({ variant = 'neutral', label, icon, style }: Props) => {
+export const Badge = ({ variant = 'neutral', label, icon, size = 'md', style }: Props) => {
   const cfg = variantConfig[variant];
 
   return (
-    <View style={[styles.badge, { backgroundColor: cfg.bg }, style]}>
-      {icon && <Ionicons name={icon} size={12} color={cfg.text} />}
-      <Text style={[styles.label, { color: cfg.text }]}>{label}</Text>
+    <View style={[styles.badge, size === 'sm' && styles.badgeSm, { backgroundColor: cfg.bg }, style]}>
+      {icon && <Ionicons name={icon} size={size === 'sm' ? 10 : 12} color={cfg.text} />}
+      <Text style={[styles.label, size === 'sm' && styles.labelSm, { color: cfg.text }]}>{label}</Text>
     </View>
   );
 };
@@ -42,5 +43,13 @@ const styles = StyleSheet.create({
   label: {
     ...typography.captionBold,
     textTransform: 'capitalize',
+  },
+  badgeSm: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  labelSm: {
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
 });

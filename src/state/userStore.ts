@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as WebBrowser from 'expo-web-browser';
 import type { Session } from '@supabase/supabase-js';
-import type { UserProfile } from '../types';
+import type { FuelType, UserProfile } from '../types';
 import { ensureUserProfile, refreshUserProfile, supabase, isSupabaseConfigured } from '../services/supabase';
 import { consumeAccess as consumeAccessRpc, grantAccess as grantAccessRpc } from '../services/pricing';
 
@@ -18,6 +18,7 @@ type UserState = {
   consumeAccess: () => Promise<void>;
   grantAccess: (delta: number, reason: string) => Promise<void>;
   updateDisplayName: (name: string) => Promise<void>;
+  updatePreferredFuel: (fuelType: FuelType | null) => Promise<void>;
 };
 
 const buildRedirectUrl = () => {
@@ -59,6 +60,7 @@ const mockProfile: UserProfile = {
   display_name: 'Test User',
   reputation: 42,
   access_remaining: 3,
+  preferred_fuel: null,
   created_at: new Date().toISOString(),
 };
 
@@ -214,5 +216,14 @@ export const useUserStore = create<UserState>((set, get) => ({
       await updateProfileName(profile.id, name);
     }
     set({ profile: { ...profile, display_name: name } });
+  },
+  updatePreferredFuel: async (fuelType: FuelType | null) => {
+    const { profile, session } = get();
+    if (!profile || !session) return;
+    if (isSupabaseConfigured()) {
+      const { updatePreferredFuel } = await import('../services/supabase');
+      await updatePreferredFuel(profile.id, fuelType);
+    }
+    set({ profile: { ...profile, preferred_fuel: fuelType } });
   },
 }));

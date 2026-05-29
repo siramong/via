@@ -18,9 +18,10 @@ import { getUserReports } from '../services/supabase';
 import { AccessCounter } from '../components/AccessCounter';
 import { MapBackground } from '../components/MapView';
 import { Badge } from '../components/ui/Badge';
+import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { useScalePress } from '../hooks/useScalePress';
 import { colors, radius, spacing, typography } from '../theme';
-import type { UserReport } from '../types';
+import type { FuelType, UserReport } from '../types';
 
 const getInitials = (name: string | null): string => {
   if (!name) return '?';
@@ -48,7 +49,7 @@ const statusBadgeVariant = (status: string) => {
 
 export const ProfileScreen = () => {
   const insets = useSafeAreaInsets();
-  const { profile, signOut, status, updateDisplayName } = useUserStore();
+  const { profile, signOut, status, updateDisplayName, updatePreferredFuel } = useUserStore();
   const [reports, setReports] = useState<UserReport[]>([]);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -75,12 +76,17 @@ export const ProfileScreen = () => {
     setShowNameModal(false);
   }, [editName, profile, updateDisplayName]);
 
+  const handlePreferredFuel = useCallback((fuel: FuelType | null) => {
+    updatePreferredFuel(fuel);
+  }, [updatePreferredFuel]);
+
   const handleSignOut = useCallback(async () => {
     await signOut();
   }, [signOut]);
 
   const signOutScale = useScalePress(0.96);
   const accessOptionScale = useScalePress(0.97);
+  const fuelOptionScale = useScalePress(0.95);
 
   if (!profile) {
     return (
@@ -120,6 +126,36 @@ export const ProfileScreen = () => {
         <View style={styles.stats}>
           <StatCard icon="shield-checkmark" label="Reputation" value={profile.reputation.toString()} />
           <StatCard icon="calendar" label="Joined" value={formatDate(profile.created_at)} />
+        </View>
+
+        {/* Preferred Fuel */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="car" size={16} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Preferred Fuel</Text>
+          </View>
+          <Text style={styles.bodyText}>
+            Select the fuel type your vehicle uses. Stations will show prices for your preferred fuel first.
+          </Text>
+          <Animated.View style={[styles.fuelOptions, { transform: [{ scale: fuelOptionScale.scale }] }]}>
+            {([null, 'regular', 'premium', 'diesel'] as const).map((fuel) => {
+              const selected = profile.preferred_fuel === fuel;
+              const label = fuel ? FUEL_DISPLAY[fuel] : 'All types';
+              return (
+                <Pressable
+                  key={fuel ?? 'all'}
+                  style={[styles.fuelOption, selected && styles.fuelOptionSelected]}
+                  onPress={() => handlePreferredFuel(fuel)}
+                  onPressIn={fuelOptionScale.onPressIn}
+                  onPressOut={fuelOptionScale.onPressOut}
+                >
+                  <Text style={[styles.fuelOptionText, selected && styles.fuelOptionTextSelected]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </Animated.View>
         </View>
 
         {/* Contribution history */}
@@ -177,7 +213,7 @@ export const ProfileScreen = () => {
             <Text style={styles.infoTitle}>How it works</Text>
           </View>
           <Text style={styles.bodyText}>
-            You start with 3 free queries. Each search uses 1 access point.
+            You start with 3 free map views. Each time you open the map, 1 access point is used.
           </Text>
           <Text style={styles.bodyText}>
             Contribute verified fuel prices to earn access back and increase reputation.
@@ -459,6 +495,32 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '700',
+  },
+  fuelOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  fuelOption: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface1,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  fuelOptionSelected: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  fuelOptionText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  fuelOptionTextSelected: {
+    color: colors.primary,
   },
   dangerButton: {
     marginTop: spacing.xl,

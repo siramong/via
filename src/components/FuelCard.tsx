@@ -40,8 +40,8 @@ export const FuelCard = ({ result }: Props) => {
           <View style={styles.emptyIcon}>
             <Ionicons name="search-outline" size={28} color={colors.textMuted} />
           </View>
-          <Text style={styles.emptyTitle}>No stations found</Text>
-          <Text style={styles.emptySubtitle}>Try expanding your search area.</Text>
+          <Text style={styles.emptyTitle}>Sin estaciones encontradas</Text>
+          <Text style={styles.emptySubtitle}>Intenta ampliar tu área de búsqueda.</Text>
         </View>
       </Animated.View>
     );
@@ -56,26 +56,26 @@ export const FuelCard = ({ result }: Props) => {
 
   const handleShare = () => {
     Share.share({
-      message: `⛽ ${result.name}\n📍 ${result.fuelType.toUpperCase()} — $${result.price.toFixed(2)}\n📏 ${formatDistance(result.distanceMeters)} away`,
+      message: `⛽ ${result.name}\n📍 ${result.fuelType.toUpperCase()} — $${result.price.toFixed(2)}\n📏 ${formatDistance(result.distanceMeters)}`,
     }).catch(() => {});
   };
 
   return (
     <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
       <View style={styles.topRow}>
-        <Text style={styles.label}>Best Station</Text>
-        <Badge variant="info" label={`Trust ${result.trustScore}`} icon="shield-checkmark" />
+        <Text style={styles.label}>Mejor estación</Text>
+        <Badge variant="info" label={`Confianza ${result.trustScore}`} icon="shield-checkmark" />
       </View>
 
       <Text style={styles.name}>{result.name}</Text>
 
       <View style={styles.distanceRow}>
         <Ionicons name="navigate" size={14} color={colors.textSecondary} />
-        <Text style={styles.distance}>{formatDistance(result.distanceMeters)} away</Text>
+        <Text style={styles.distance}>{formatDistance(result.distanceMeters)}</Text>
       </View>
 
       <View style={styles.priceSection}>
-        <Text style={styles.priceLabel}>Best price</Text>
+        <Text style={styles.priceLabel}>Mejor precio</Text>
         <View style={styles.priceRow}>
           <Text style={styles.price}>${result.price.toFixed(2)}</Text>
           <Badge variant="info" label={FUEL_DISPLAY[result.fuelType]} />
@@ -89,8 +89,8 @@ export const FuelCard = ({ result }: Props) => {
       <View style={styles.divider} />
 
       <View style={styles.actionRow}>
-        <Button title="Navigate" icon="navigate" variant="primary" size="sm" onPress={openMaps} style={{ flex: 1 }} />
-        <Button title="Share" icon="share-outline" variant="secondary" size="sm" onPress={handleShare} style={{ flex: 1 }} />
+        <Button title="Navegar" icon="navigate" variant="primary" size="sm" onPress={openMaps} style={{ flex: 1 }} />
+        <Button title="Compartir" icon="share-outline" variant="secondary" size="sm" onPress={handleShare} style={{ flex: 1 }} />
       </View>
     </Animated.View>
   );

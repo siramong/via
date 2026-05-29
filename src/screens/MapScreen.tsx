@@ -136,11 +136,11 @@ export const MapScreen = () => {
         <View style={styles.lockedBanner}>
           <Ionicons name="lock-closed" size={14} color={colors.warning} />
           <Text style={styles.lockedBannerText}>
-            Access locked — contribute to search & refresh
+            Acceso bloqueado — contribuye para buscar y actualizar
           </Text>
-          <Pressable onPress={handleContribute} style={styles.lockedBannerBtn}>
-            <Text style={styles.lockedBannerBtnText}>Contribute</Text>
-          </Pressable>
+            <Pressable onPress={handleContribute} style={styles.lockedBannerBtn}>
+              <Text style={styles.lockedBannerBtnText}>Contribuir</Text>
+            </Pressable>
         </View>
       )}
       <StationDetailSheet station={selectedStation} onClose={handleCloseSheet} />

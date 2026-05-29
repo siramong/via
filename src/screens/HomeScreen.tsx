@@ -92,10 +92,10 @@ export const HomeScreen = () => {
           />
         }
       >
-        <Text style={styles.title}>Best nearby</Text>
+        <Text style={styles.title}>Mejor cerca</Text>
         {preferredFuel && (
           <Text style={styles.filterHint}>
-            Showing {FUEL_DISPLAY[preferredFuel]}
+            Mostrando {FUEL_DISPLAY[preferredFuel]}
           </Text>
         )}
         {bestStationResult && (
@@ -105,7 +105,7 @@ export const HomeScreen = () => {
         )}
       </ScrollView>
       {!coords && (
-        <Text style={styles.hint}>Enable location to find the best fuel prices</Text>
+        <Text style={styles.hint}>Activa la ubicación para encontrar los mejores precios</Text>
       )}
     </View>
   );

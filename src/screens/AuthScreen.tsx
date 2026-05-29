@@ -51,23 +51,23 @@ export const AuthScreen = () => {
 
   const handleEmailAuth = useCallback(async () => {
     if (!email || !password) {
-      setAuthError('Email and password required');
+      setAuthError('Correo y contraseña requeridos');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setAuthError('Please enter a valid email address');
+      setAuthError('Ingresa un correo válido');
       return;
     }
 
     if (password.length < 6) {
-      setAuthError('Password must be at least 6 characters');
+      setAuthError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
     if (!isSupabaseConfigured()) {
-      setAuthError('Supabase not configured');
+      setAuthError('Supabase no configurado');
       return;
     }
 
@@ -125,12 +125,12 @@ export const AuthScreen = () => {
           </View>
           <Text style={styles.appName}>VIA</Text>
         </View>
-        <Text style={styles.tagline}>Live fuel prices powered by your city.</Text>
+        <Text style={styles.tagline}>Precios de combustible en vivo impulsados por tu ciudad.</Text>
 
         <View style={styles.featureList}>
-          <Feature icon="locate" text="Nearest stations in real time" />
-          <Feature icon="pricetags" text="Community verified prices" />
-          <Feature icon="camera" text="Submit a photo in seconds" />
+          <Feature icon="locate" text="Estaciones cercanas en tiempo real" />
+          <Feature icon="pricetags" text="Precios verificados por la comunidad" />
+          <Feature icon="camera" text="Envía una foto en segundos" />
         </View>
 
         <Animated.View style={[styles.authCard, { opacity, transform: [{ translateY }] }]}>
@@ -142,7 +142,7 @@ export const AuthScreen = () => {
                 onPressIn={loginTabScale.onPressIn}
                 onPressOut={loginTabScale.onPressOut}
               >
-                <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>Login</Text>
+                <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>Iniciar sesión</Text>
               </Pressable>
             </Animated.View>
             <Animated.View style={{ flex: 1, transform: [{ scale: createTabScale.scale }] }}>
@@ -153,7 +153,7 @@ export const AuthScreen = () => {
                 onPressOut={createTabScale.onPressOut}
               >
                 <Text style={[styles.modeTabText, mode === 'signup' && styles.modeTabTextActive]}>
-                  Create
+                  Crear cuenta
                 </Text>
               </Pressable>
             </Animated.View>
@@ -163,7 +163,7 @@ export const AuthScreen = () => {
             <Ionicons name="mail" size={18} color={colors.textSecondary} />
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder="Correo electrónico"
               placeholderTextColor={colors.textSecondary}
               value={email}
               onChangeText={setEmail}
@@ -177,7 +177,7 @@ export const AuthScreen = () => {
             <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
             <TextInput
               style={styles.input}
-              placeholder="Password"
+              placeholder="Contraseña"
               placeholderTextColor={colors.textSecondary}
               value={password}
               onChangeText={setPassword}
@@ -206,7 +206,7 @@ export const AuthScreen = () => {
                 <ActivityIndicator color={colors.background} />
               ) : (
                 <Text style={styles.primaryButtonText}>
-                  {mode === 'signup' ? 'Create Account' : 'Sign In'}
+                  {mode === 'signup' ? 'Crear cuenta' : 'Iniciar sesión'}
                 </Text>
               )}
             </LinearGradient>
@@ -214,7 +214,7 @@ export const AuthScreen = () => {
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
+            <Text style={styles.dividerText}>o</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -225,7 +225,7 @@ export const AuthScreen = () => {
               ) : (
                 <>
                   <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                  <Text style={styles.googleButtonText}>Continuar con Google</Text>
                 </>
               )}
             </Pressable>
@@ -233,7 +233,7 @@ export const AuthScreen = () => {
         </Animated.View>
 
         <Text style={styles.disclaimer}>
-          No anonymous access. Sign in required to view fuel prices.
+          Sin acceso anónimo. Inicia sesión para ver los precios.
         </Text>
       </ScrollView>
     </View>

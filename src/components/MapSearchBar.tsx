@@ -27,7 +27,7 @@ export const MapSearchBar = ({ value, onChange, onClear }: Props) => {
         <TextInput
           ref={inputRef}
           style={styles.input}
-          placeholder="Search stations..."
+          placeholder="Buscar estaciones..."
           placeholderTextColor={colors.textMuted}
           value={value}
           onChangeText={onChange}

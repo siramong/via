@@ -60,7 +60,7 @@ export const ContributeScreen = () => {
       if (!hasPermission.granted) {
         const req = await ImagePicker.requestCameraPermissionsAsync();
         if (!req.granted) {
-          setError('Camera permission denied');
+          setError('Permiso de cámara denegado');
           setLoading(false);
           return;
         }
@@ -84,7 +84,7 @@ export const ContributeScreen = () => {
 
       const asset = result.assets?.[0];
       if (!asset?.uri) {
-        setError('No photo returned from camera');
+        setError('No se recibió foto de la cámara');
         setLoading(false);
         return;
       }
@@ -116,13 +116,13 @@ export const ContributeScreen = () => {
         setOcrError(output.error);
       }
       if (Object.keys(output.prices).length === 0) {
-        toast.info('No prices detected. Enter them manually.');
+        toast.info('No se detectaron precios. Ingrésalos manualmente.');
       }
     } catch (err) {
       const msg = (err as Error).message;
       console.error('[OCR]', msg);
       setOcrError(msg);
-      toast.error('OCR failed. Enter prices manually.');
+      toast.error('OCR falló. Ingresa los precios manualmente.');
     } finally {
       setOcrDone(true);
       setLoading(false);
@@ -161,7 +161,7 @@ export const ContributeScreen = () => {
 
       await grantAccess(2, 'valid_report');
 
-      toast.success('Report submitted! You earned +2 access.');
+      toast.success('¡Reporte enviado! Ganaste +2 accesos.');
       setImageUri(null);
       setPrices({});
       setSelectedStation(null);
@@ -195,8 +195,8 @@ export const ContributeScreen = () => {
             <Ionicons name="camera" size={18} color={colors.textPrimary} />
           </View>
           <View style={styles.headerText}>
-            <Text style={styles.title}>Contribute</Text>
-            <Text style={styles.subtitle}>Share fresh prices and earn access.</Text>
+            <Text style={styles.title}>Contribuir</Text>
+            <Text style={styles.subtitle}>Comparte precios frescos y gana acceso.</Text>
           </View>
         </View>
 
@@ -205,14 +205,14 @@ export const ContributeScreen = () => {
             <Card variant="glass">
               <View style={styles.sectionHeader}>
                 <Ionicons name="camera" size={18} color={colors.primary} />
-                <Text style={styles.sectionTitle}>Capture the pump display</Text>
+                <Text style={styles.sectionTitle}>Captura el display del surtidor</Text>
               </View>
               <Text style={styles.bodyText}>
-                A clear photo improves OCR accuracy and speeds up the review.
+                Una foto clara mejora la precisión del OCR y acelera la revisión.
               </Text>
               {!!error && <Text style={styles.error}>{error}</Text>}
               <Button
-                title="Open Camera"
+                title="Abrir cámara"
                 icon="camera"
                 variant="primary"
                 loading={loading}
@@ -231,10 +231,10 @@ export const ContributeScreen = () => {
             <Card variant="glass" style={{ marginTop: spacing.md }}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="pricetags" size={18} color={colors.primary} />
-                <Text style={styles.sectionTitle}>Prices</Text>
+                <Text style={styles.sectionTitle}>Precios</Text>
               </View>
               <Text style={styles.bodyText}>
-                {ocrDone ? 'Adjust any incorrect values below.' : 'Running OCR...'}
+                  {ocrDone ? 'Ajusta cualquier valor incorrecto abajo.' : 'Ejecutando OCR...'}
               </Text>
               {loading && !ocrDone ? (
                 <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
@@ -256,7 +256,7 @@ export const ContributeScreen = () => {
               <Card variant="glass" style={{ marginTop: spacing.md }}>
                 <View style={styles.sectionHeader}>
                   <Ionicons name="text" size={18} color={colors.warning} />
-                  <Text style={styles.sectionTitle}>OCR Raw Text</Text>
+                  <Text style={styles.sectionTitle}>Texto OCR Crudo</Text>
                 </View>
                 <Text style={styles.ocrRawText}>{ocrRawText}</Text>
                 {!!ocrError && (
@@ -268,13 +268,13 @@ export const ContributeScreen = () => {
             <Card variant="glass" style={{ marginTop: spacing.md }}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="location" size={18} color={colors.primary} />
-                <Text style={styles.sectionTitle}>Station</Text>
+                <Text style={styles.sectionTitle}>Estación</Text>
               </View>
               <Text style={styles.bodyText}>
-                Select which station this price belongs to.
+                Selecciona a qué estación pertenece este precio.
               </Text>
               <Button
-                title={selectedStation?.name ?? 'Choose station...'}
+                title={selectedStation?.name ?? 'Elegir estación...'}
                 icon={selectedStation ? 'checkmark-circle' : 'ellipse-outline'}
                 variant="secondary"
                 size="sm"
@@ -286,9 +286,9 @@ export const ContributeScreen = () => {
             {!!error && <Text style={styles.error}>{error}</Text>}
 
             <View style={styles.actions}>
-              <Button title="Back" variant="secondary" icon="arrow-back" onPress={resetAll} size="md" style={{ flex: 1 }} />
+              <Button title="Atrás" variant="secondary" icon="arrow-back" onPress={resetAll} size="md" style={{ flex: 1 }} />
               <Button
-                title="Continue"
+                title="Continuar"
                 variant="primary"
                 icon="arrow-forward"
                 disabled={!hasPrices}
@@ -305,24 +305,24 @@ export const ContributeScreen = () => {
             <Card variant="glass">
               <View style={styles.sectionHeader}>
                 <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                <Text style={styles.sectionTitle}>Confirm report</Text>
+                <Text style={styles.sectionTitle}>Confirmar reporte</Text>
               </View>
 
               <View style={styles.confirmPhoto}>
                 <Ionicons name="image" size={16} color={colors.textMuted} />
-                <Text style={styles.confirmPhotoText}>Photo captured</Text>
+                <Text style={styles.confirmPhotoText}>Foto capturada</Text>
               </View>
 
               {selectedStation && (
                 <View style={styles.confirmRow}>
                   <Ionicons name="location" size={16} color={colors.textSecondary} />
-                  <Text style={styles.confirmLabel}>Station:</Text>
+                  <Text style={styles.confirmLabel}>Estación:</Text>
                   <Text style={styles.confirmValue} numberOfLines={1}>{selectedStation.name}</Text>
                 </View>
               )}
 
               <View style={styles.confirmPrices}>
-                <Text style={styles.confirmPricesLabel}>Prices</Text>
+                <Text style={styles.confirmPricesLabel}>Precios</Text>
                 <View style={styles.confirmPricesGrid}>
                   {allFuelTypes.map((ft) => {
                     const v = prices[ft];
@@ -341,7 +341,7 @@ export const ContributeScreen = () => {
 
               <View style={styles.actions}>
                 <Button
-                  title="Edit"
+                  title="Editar"
                   variant="secondary"
                   icon="arrow-back"
                   onPress={() => setStep('review')}
@@ -349,7 +349,7 @@ export const ContributeScreen = () => {
                   style={{ flex: 1 }}
                 />
                 <Button
-                  title="Submit"
+                  title="Enviar"
                   variant="primary"
                   icon="cloud-upload"
                   loading={loading}

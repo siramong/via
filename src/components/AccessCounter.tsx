@@ -14,7 +14,7 @@ export const AccessCounter = ({ remaining }: Props) => {
         <View style={[styles.iconWrap, { backgroundColor: `${tone}22` }]}>
           <Ionicons name="key" size={16} color={tone} />
         </View>
-        <Text style={styles.label}>Access Remaining</Text>
+        <Text style={styles.label}>Acceso restante</Text>
       </View>
       <Text style={[styles.value, { color: tone }]}>{remaining}</Text>
     </View>

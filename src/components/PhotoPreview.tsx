@@ -13,13 +13,13 @@ export const PhotoPreview = ({ uri, onRetake }: Props) => (
       <Image source={{ uri }} style={styles.image} />
       <View style={styles.badge}>
         <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-        <Text style={styles.badgeText}>Photo captured</Text>
+        <Text style={styles.badgeText}>Foto capturada</Text>
       </View>
     </View>
     {onRetake && (
       <Pressable style={styles.retake} onPress={onRetake}>
         <Ionicons name="refresh" size={16} color={colors.textSecondary} />
-        <Text style={styles.retakeText}>Retake</Text>
+        <Text style={styles.retakeText}>Repetir</Text>
       </Pressable>
     )}
   </View>

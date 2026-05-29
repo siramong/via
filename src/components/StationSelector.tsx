@@ -69,7 +69,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
   const loadStations = useCallback(async () => {
     if (!userCoords) {
       setLoading(false);
-      setError('Location not available.');
+      setError('Ubicación no disponible.');
       return;
     }
     setLoading(true);
@@ -78,7 +78,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
     try {
       const stations = await findNearbyRealStations(userCoords);
       if (stations.length === 0) {
-        setError('No gas stations found within a large radius. Try a different location.');
+        setError('No se encontraron estaciones en un radio amplio. Prueba otra ubicación.');
       } else {
         setRealStations(stations);
       }
@@ -109,7 +109,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
         const marker = await ensureStation(realStation);
         onSelect(marker);
       } catch {
-        setError('Could not save this station. Ensure your database migrations are applied and try again.');
+        setError('No se pudo guardar la estación. Asegúrate de que las migraciones estén aplicadas e inténtalo de nuevo.');
       } finally {
         setSavingId(null);
       }
@@ -137,12 +137,12 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
           >
             <View style={styles.headerSection}>
               <View style={styles.handle} />
-              <Text style={styles.title}>Select station</Text>
+              <Text style={styles.title}>Seleccionar estación</Text>
               <View style={styles.searchRow}>
                 <Ionicons name="search" size={16} color={colors.textMuted} />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search nearby stations..."
+                  placeholder="Buscar estaciones cercanas..."
                   placeholderTextColor={colors.textMuted}
                   value={search}
                   onChangeText={setSearch}
@@ -154,7 +154,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
               {loading && (
                 <View style={styles.centerWrap}>
                   <ActivityIndicator color={colors.primary} size="large" />
-                  <Text style={styles.centerText}>Scanning for nearby gas stations...</Text>
+                  <Text style={styles.centerText}>Buscando estaciones de servicio cercanas...</Text>
                 </View>
               )}
 
@@ -163,7 +163,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
                   <Ionicons name="alert-circle-outline" size={40} color={colors.danger} />
                   <Text style={[styles.centerText, { color: colors.danger }]}>{error}</Text>
                   <Button
-                    title="Retry"
+                    title="Reintentar"
                     icon="refresh"
                     variant="secondary"
                     size="sm"
@@ -177,10 +177,10 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
                 <View style={styles.centerWrap}>
                   <Ionicons name="location-outline" size={40} color={colors.textMuted} />
                   <Text style={styles.centerText}>
-                    No gas stations found nearby. Try retrying or check your location.
+                    No se encontraron estaciones cercanas. Reintenta o verifica tu ubicación.
                   </Text>
                   <Button
-                    title="Retry"
+                    title="Reintentar"
                     icon="refresh"
                     variant="secondary"
                     size="sm"

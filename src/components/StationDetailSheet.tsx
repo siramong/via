@@ -81,7 +81,7 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.name} numberOfLines={1}>{station.name}</Text>
-              <Text style={styles.distance}>{formatDistance(station.distanceMeters)} away</Text>
+              <Text style={styles.distance}>{formatDistance(station.distanceMeters)}</Text>
             </View>
           </View>
           <Pressable onPress={onClose} style={styles.closeBtn}>
@@ -91,7 +91,7 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
 
         {station.price != null && (
           <View style={styles.priceSection}>
-            <Text style={styles.priceLabel}>Best price</Text>
+            <Text style={styles.priceLabel}>Mejor precio</Text>
             <View style={styles.priceRow}>
               <Text style={styles.price}>${station.price.toFixed(2)}</Text>
               {station.fuelType && (
@@ -112,7 +112,7 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
           {station.trustScore != null && (
             <Badge
               variant="neutral"
-              label={`Trust ${station.trustScore}`}
+              label={`Confianza ${station.trustScore}`}
               icon="shield-checkmark"
             />
           )}
@@ -121,7 +121,7 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
         <View style={styles.actions}>
           <Button
             variant="primary"
-            title="Navigate"
+            title="Navegar"
             icon="navigate"
             onPress={openMaps}
             size="md"
@@ -129,7 +129,7 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
           />
           <Button
             variant="secondary"
-            title="Share"
+            title="Compartir"
             icon="share-outline"
             onPress={() => {}}
             size="md"

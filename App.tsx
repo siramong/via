@@ -77,32 +77,32 @@ const AppTabs = () => {
       name="Home"
       component={HomeScreen}
       options={{
-        title: 'Best',
-        tabBarLabel: 'Best',
+        title: 'Mejor',
+        tabBarLabel: 'Mejor',
       }}
     />
     <Tab.Screen
       name="Contribute"
       component={ContributeScreen}
       options={{
-        title: 'Contribute',
-        tabBarLabel: 'Contribute',
+        title: 'Contribuir',
+        tabBarLabel: 'Contribuir',
       }}
     />
     <Tab.Screen
       name="Map"
       component={MapScreen}
       options={{
-        title: 'Map',
-        tabBarLabel: 'Map',
+        title: 'Mapa',
+        tabBarLabel: 'Mapa',
       }}
     />
     <Tab.Screen
       name="Profile"
       component={ProfileScreen}
       options={{
-        title: 'Profile',
-        tabBarLabel: 'Profile',
+        title: 'Perfil',
+        tabBarLabel: 'Perfil',
       }}
     />
   </Tab.Navigator>

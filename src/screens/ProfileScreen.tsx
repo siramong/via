@@ -34,7 +34,7 @@ const getInitials = (name: string | null): string => {
 
 const formatDate = (iso: string): string => {
   const d = new Date(iso);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 };
 
@@ -112,7 +112,7 @@ export const ProfileScreen = () => {
             <Text style={styles.avatarText}>{getInitials(profile.display_name)}</Text>
           </LinearGradient>
           <View style={styles.headerInfo}>
-            <Text style={styles.title}>Profile</Text>
+            <Text style={styles.title}>Perfil</Text>
             <Pressable onPress={handleOpenNameEdit} style={styles.nameRow}>
               <Text style={styles.displayName}>{profile.display_name}</Text>
               <Ionicons name="pencil" size={14} color={colors.textMuted} />
@@ -124,23 +124,23 @@ export const ProfileScreen = () => {
 
         {/* Stats */}
         <View style={styles.stats}>
-          <StatCard icon="shield-checkmark" label="Reputation" value={profile.reputation.toString()} />
-          <StatCard icon="calendar" label="Joined" value={formatDate(profile.created_at)} />
+          <StatCard icon="shield-checkmark" label="Reputación" value={profile.reputation.toString()} />
+          <StatCard icon="calendar" label="Registrado" value={formatDate(profile.created_at)} />
         </View>
 
         {/* Preferred Fuel */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="car" size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Preferred Fuel</Text>
+            <Text style={styles.sectionTitle}>Combustible preferido</Text>
           </View>
           <Text style={styles.bodyText}>
-            Select the fuel type your vehicle uses. Stations will show prices for your preferred fuel first.
+            Selecciona el tipo de combustible que usa tu vehículo. Las estaciones mostrarán primero los precios de tu combustible preferido.
           </Text>
           <Animated.View style={[styles.fuelOptions, { transform: [{ scale: fuelOptionScale.scale }] }]}>
             {([null, 'ecopais', 'super', 'diesel'] as const).map((fuel) => {
               const selected = profile.preferred_fuel === fuel;
-              const label = fuel ? FUEL_DISPLAY[fuel] : 'All types';
+              const label = fuel ? FUEL_DISPLAY[fuel] : 'Todos';
               return (
                 <Pressable
                   key={fuel ?? 'all'}
@@ -162,23 +162,28 @@ export const ProfileScreen = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="time" size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Recent Reports</Text>
+            <Text style={styles.sectionTitle}>Reportes recientes</Text>
           </View>
           {reportsLoading ? (
             <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
           ) : reports.length === 0 ? (
-            <Text style={styles.emptyText}>No reports yet. Submit your first price!</Text>
+            <Text style={styles.emptyText}>Sin reportes aún. ¡Envía tu primer precio!</Text>
           ) : (
             <View style={styles.reportList}>
               {reports.map((r) => (
                 <View key={r.id} style={styles.reportItem}>
                   <View style={styles.reportMeta}>
                     <Text style={styles.reportStation} numberOfLines={1}>
-                      {r.station_name ?? 'Unknown station'}
+                      {r.station_name ?? 'Estación desconocida'}
                     </Text>
                     <Text style={styles.reportDate}>{formatDate(r.created_at)}</Text>
                   </View>
-                  <Badge variant={statusBadgeVariant(r.status)} label={r.status} />
+                  <Badge variant={statusBadgeVariant(r.status)} label={
+    r.status === 'approved' ? 'aprobado' :
+    r.status === 'rejected' ? 'rechazado' :
+    r.status === 'pending' ? 'pendiente' :
+    r.status
+  } />
                 </View>
               ))}
             </View>
@@ -189,17 +194,17 @@ export const ProfileScreen = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="key" size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Get More Access</Text>
+            <Text style={styles.sectionTitle}>Obtener más accesos</Text>
           </View>
           <Text style={styles.bodyText}>
-            Earn access points by contributing verified fuel prices.
+            Gana puntos de acceso contribuyendo precios verificados.
           </Text>
           <View style={styles.accessOptions}>
             <Animated.View style={{ transform: [{ scale: accessOptionScale.scale }] }}>
               <AccessOption
                 icon="camera"
-                title="Submit a report"
-                description="Earn 2 access points per verified report"
+                title="Enviar un reporte"
+                description="Gana 2 puntos de acceso por reporte verificado"
                 onPress={() => {}}
               />
             </Animated.View>
@@ -210,13 +215,13 @@ export const ProfileScreen = () => {
         <View style={styles.infoCard}>
           <View style={styles.infoHeader}>
             <Ionicons name="star" size={16} color={colors.primary} />
-            <Text style={styles.infoTitle}>How it works</Text>
+            <Text style={styles.infoTitle}>Cómo funciona</Text>
           </View>
           <Text style={styles.bodyText}>
-            You start with 3 free map views. Each time you open the map, 1 access point is used.
+            Comienzas con 3 vistas de mapa gratuitas. Cada vez que abres el mapa, se usa 1 punto de acceso.
           </Text>
           <Text style={styles.bodyText}>
-            Contribute verified fuel prices to earn access back and increase reputation.
+            Contribuye precios verificados para recuperar accesos y aumentar tu reputación.
           </Text>
         </View>
 
@@ -228,7 +233,7 @@ export const ProfileScreen = () => {
             ) : (
               <>
                 <Ionicons name="log-out" size={16} color={colors.danger} />
-                <Text style={styles.dangerButtonText}>Sign Out</Text>
+                <Text style={styles.dangerButtonText}>Cerrar sesión</Text>
               </>
             )}
           </Pressable>
@@ -239,22 +244,22 @@ export const ProfileScreen = () => {
       <Modal visible={showNameModal} transparent animationType="fade" onRequestClose={() => setShowNameModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowNameModal(false)}>
           <Pressable style={styles.modalContent} onPress={() => {}}>
-            <Text style={styles.modalTitle}>Edit display name</Text>
+            <Text style={styles.modalTitle}>Editar nombre</Text>
             <TextInput
               style={styles.modalInput}
               value={editName}
               onChangeText={setEditName}
-              placeholder="Your name"
+              placeholder="Tu nombre"
               placeholderTextColor={colors.textMuted}
               autoFocus
             />
             <View style={styles.modalActions}>
               <Pressable style={styles.modalCancel} onPress={() => setShowNameModal(false)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>Cancelar</Text>
               </Pressable>
               <Pressable style={styles.modalSave} onPress={handleSaveName}>
                 <LinearGradient colors={[colors.primary, colors.accent]} style={styles.modalSaveFill}>
-                  <Text style={styles.modalSaveText}>Save</Text>
+                  <Text style={styles.modalSaveText}>Guardar</Text>
                 </LinearGradient>
               </Pressable>
             </View>

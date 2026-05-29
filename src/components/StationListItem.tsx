@@ -49,7 +49,7 @@ export const StationListItem = ({ station, rank, onPress }: Props) => {
             <>
               <Text style={styles.price}>${station.price.toFixed(2)}</Text>
               {station.trustScore != null && (
-                <Text style={styles.trust}>Trust {station.trustScore}</Text>
+                <Text style={styles.trust}>Confianza {station.trustScore}</Text>
               )}
             </>
           ) : (

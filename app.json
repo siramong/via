@@ -24,14 +24,14 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow VIA to access your location to find nearby fuel stations."
+          "locationAlwaysAndWhenInUsePermission": "Permite a VIA acceder a tu ubicación para encontrar estaciones de combustible cercanas."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow VIA to access your photos.",
-          "cameraPermission": "Allow VIA to access your camera to capture fuel pump displays."
+          "photosPermission": "Permite a VIA acceder a tus fotos.",
+          "cameraPermission": "Permite a VIA acceder a tu cámara para capturar displays de surtidores."
         }
       ]
     ],
@@ -39,9 +39,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.siramong.via",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "VIA needs access to your location to find the cheapest fuel nearby.",
-        "NSCameraUsageDescription": "VIA needs camera access to capture fuel pump displays.",
-        "NSPhotoLibraryUsageDescription": "VIA needs access to your photos to submit fuel price reports."
+        "NSLocationWhenInUseUsageDescription": "VIA necesita acceso a tu ubicación para encontrar el combustible más barato cerca.",
+        "NSCameraUsageDescription": "VIA necesita acceso a la cámara para capturar displays de surtidores.",
+        "NSPhotoLibraryUsageDescription": "VIA necesita acceso a tus fotos para enviar reportes de precios."
       }
     },
     "android": {

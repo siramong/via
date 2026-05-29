@@ -24,18 +24,6 @@
 - `src/services/` — integraciones (supabase, OCR, pricing)
 - `assets/` — iconos y gráficos usados en la app
 
-## Assets incluidos
-Se detectaron los siguientes assets en `assets/` y se pueden usar para previsualización:
-
-- `assets/icon.png`
-- `assets/splash-icon.png`
-
-Preview:
-
-![App icon](assets/icon.png)
-
-![Splash icon](assets/splash-icon.png)
-
 ## Notas rápidas para mantenedores
 - Este repositorio está pensado para uso privado y desarrollo interno.
 - Si necesitas ejecutar o probar localmente, pide acceso a quienes administran el proyecto para instrucciones privadas.

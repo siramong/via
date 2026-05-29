@@ -133,7 +133,7 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
             icon="share-outline"
             onPress={() => {}}
             size="md"
-            style={{ width: 52 }}
+            style={{ width: 100 }}
           />
         </View>
       </Animated.View>

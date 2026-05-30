@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadows, spacing } from '../theme';
 
@@ -13,19 +14,21 @@ type Props = {
 export const MapSearchBar = ({ value, onChange, onClear }: Props) => {
   const insets = useSafeAreaInsets();
   const [focused, setFocused] = useState(false);
-  const inputRef = useRef<TextInput>(null);
-  const opacity = useRef(new Animated.Value(0)).current;
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
-    Animated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
-  }, [opacity]);
+    opacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   return (
-    <Animated.View style={[styles.container, { opacity, top: insets.top + spacing.md }]}>
+    <Animated.View style={[styles.container, animatedStyle, { top: insets.top + spacing.md }]}>
       <View style={[styles.inputRow, focused && styles.inputRowFocused]}>
         <Ionicons name="search" size={18} color={colors.textSecondary} />
         <TextInput
-          ref={inputRef}
           style={styles.input}
           placeholder="Buscar estaciones..."
           placeholderTextColor={colors.textMuted}

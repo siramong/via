@@ -1,4 +1,5 @@
-import { ActivityIndicator, Animated, Pressable, PressableProps, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, PressableProps, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useScalePress } from '../../hooks/useScalePress';
@@ -32,7 +33,7 @@ export const Button = ({
   style,
   ...rest
 }: Props) => {
-  const { scale, onPressIn, onPressOut } = useScalePress(0.96);
+  const { animatedStyle, onPressIn, onPressOut } = useScalePress(0.96);
 
   const cfg = sizeConfig[size];
   const isDisabled = disabled || loading;
@@ -40,7 +41,7 @@ export const Button = ({
   const content = (
     <>
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.background : colors.textPrimary} size="small" />
+        <ActivityIndicator color={variant === 'primary' ? colors.textPrimary : colors.textPrimary} size="small" />
       ) : (
         <>
           {icon && <Ionicons name={icon} size={cfg.iconSize} color={textColor()} />}
@@ -51,12 +52,10 @@ export const Button = ({
   );
 
   function textColor() {
-    if (variant === 'primary') return colors.background;
+    if (variant === 'primary') return colors.textPrimary;
     if (variant === 'danger') return colors.danger;
     return colors.textPrimary;
   }
-
-  const animatedStyle = { transform: [{ scale }] };
 
   if (variant === 'primary') {
     return (

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { runOcrWithRetries, type OcrOutput } from '../services/ocr';
@@ -40,17 +40,20 @@ export const ContributeScreen = () => {
   const [ocrDone, setOcrDone] = useState(false);
   const [ocrRawText, setOcrRawText] = useState<string>('');
   const [ocrError, setOcrError] = useState<string>('');
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(14)).current;
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(14);
 
   useEffect(() => {
-    opacity.setValue(0);
-    translateY.setValue(14);
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
-    ]).start();
-  }, [opacity, translateY, step]);
+    opacity.value = 0;
+    translateY.value = 14;
+    opacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
+    translateY.value = withTiming(0, { duration: 220, easing: Easing.out(Easing.cubic) });
+  }, [step]);
+
+  const stepStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const pickImage = useCallback(async () => {
     setLoading(true);
@@ -201,7 +204,7 @@ export const ContributeScreen = () => {
         </View>
 
         {step === 'camera' && (
-          <Animated.View style={[{ opacity, transform: [{ translateY }] }]}>
+          <Animated.View style={stepStyle}>
             <Card variant="glass">
               <View style={styles.sectionHeader}>
                 <Ionicons name="camera" size={18} color={colors.primary} />
@@ -225,7 +228,7 @@ export const ContributeScreen = () => {
         )}
 
         {step === 'review' && imageUri && (
-          <Animated.View style={[{ opacity, transform: [{ translateY }] }]}>
+          <Animated.View style={stepStyle}>
             <PhotoPreview uri={imageUri} onRetake={resetAll} />
 
             <Card variant="glass" style={{ marginTop: spacing.md }}>
@@ -301,7 +304,7 @@ export const ContributeScreen = () => {
         )}
 
         {step === 'confirm' && imageUri && (
-          <Animated.View style={[{ opacity, transform: [{ translateY }] }]}>
+          <Animated.View style={stepStyle}>
             <Card variant="glass">
               <View style={styles.sectionHeader}>
                 <Ionicons name="checkmark-circle" size={18} color={colors.success} />

@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, View, ViewStyle } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
 import { colors, radius } from '../../theme';
 
 type Props = {
@@ -10,18 +11,22 @@ type Props = {
 };
 
 export const Skeleton = ({ width = '100%', height = 20, borderRadius: customRadius, style }: Props) => {
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const opacity = useSharedValue(0.3);
 
   useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
-      ]),
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.3, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      true,
     );
-    animation.start();
-    return () => animation.stop();
-  }, [opacity]);
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   return (
     <Animated.View
@@ -31,8 +36,8 @@ export const Skeleton = ({ width = '100%', height = 20, borderRadius: customRadi
           width: width as any,
           height,
           borderRadius: customRadius ?? radius.sm,
-          opacity,
         },
+        animatedStyle,
         style,
       ]}
     />

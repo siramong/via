@@ -1,14 +1,6 @@
-import { useEffect, useRef } from 'react';
-import {
-  Animated,
-  Dimensions,
-  Linking,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useEffect } from 'react';
+import { Dimensions, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { colors, radius, shadows, spacing, typography } from '../theme';
@@ -42,20 +34,26 @@ const freshnessIcon = (freshness?: string) => {
 };
 
 export const StationDetailSheet = ({ station, onClose }: Props) => {
-  const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const translateY = useSharedValue(SHEET_HEIGHT);
+  const backdropOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (station) {
-      Animated.parallel([
-        Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
-        Animated.timing(backdropOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-      ]).start();
+      translateY.value = withSpring(0, { damping: 22, stiffness: 200 });
+      backdropOpacity.value = withTiming(1, { duration: 200 });
     } else {
-      translateY.setValue(SHEET_HEIGHT);
-      backdropOpacity.setValue(0);
+      translateY.value = SHEET_HEIGHT;
+      backdropOpacity.value = 0;
     }
-  }, [station, translateY, backdropOpacity]);
+  }, [station]);
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: backdropOpacity.value,
+  }));
 
   if (!station) return null;
 
@@ -65,14 +63,14 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
   };
 
   return (
-    <Modal transparent animationType="none" visible onRequestClose={onClose}>
+    <Modal transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.wrapper} pointerEvents="box-none">
         <Animated.View
-          style={[styles.backdrop, { opacity: backdropOpacity }]}
+          style={[styles.backdrop, backdropStyle]}
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
-        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+        <Animated.View style={[styles.sheet, sheetStyle]}>
           <View style={styles.handle} />
           <View style={styles.header}>
           <View style={styles.headerLeft}>

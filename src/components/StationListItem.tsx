@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, Easing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { Badge } from './ui/Badge';
@@ -18,18 +19,22 @@ const formatDistance = (meters: number) => {
 };
 
 export const StationListItem = ({ station, rank, onPress }: Props) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateX = useRef(new Animated.Value(20)).current;
+  const opacity = useSharedValue(0);
+  const translateX = useSharedValue(20);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 300, delay: rank * 50, useNativeDriver: true }),
-      Animated.timing(translateX, { toValue: 0, duration: 300, delay: rank * 50, useNativeDriver: true }),
-    ]).start();
-  }, [opacity, translateX, rank]);
+    const delayMs = rank * 50;
+    opacity.value = withDelay(delayMs, withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) }));
+    translateX.value = withDelay(delayMs, withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) }));
+  }, [rank]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateX: translateX.value }],
+  }));
 
   return (
-    <Animated.View style={{ opacity, transform: [{ translateX }] }}>
+    <Animated.View style={animatedStyle}>
       <Pressable style={styles.card} onPress={() => onPress(station)}>
         <View style={styles.left}>
           <Text style={styles.rank}>#{rank + 1}</Text>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, Easing } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { MapBackground } from '../components/MapView';
@@ -23,6 +24,47 @@ export const MapScreen = () => {
   const [bestStationId, setBestStationId] = useState<string | undefined>(undefined);
   const mapRef = useRef<any>(null);
   const loaded = useRef(false);
+  const hasAnimated = useRef(false);
+
+  const searchOpacity = useSharedValue(0);
+  const searchTranslateY = useSharedValue(-20);
+  const refreshOpacity = useSharedValue(0);
+  const refreshScale = useSharedValue(0.5);
+  const badgeOpacity = useSharedValue(0);
+  const badgeScale = useSharedValue(0.5);
+
+  useEffect(() => {
+    if (hasAnimated.current) return;
+    hasAnimated.current = true;
+
+    searchOpacity.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
+    searchTranslateY.value = withSpring(0, { damping: 18, stiffness: 200 });
+
+    setTimeout(() => {
+      refreshOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+      refreshScale.value = withSpring(1, { damping: 15, stiffness: 200 });
+    }, 200);
+
+    setTimeout(() => {
+      badgeOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+      badgeScale.value = withSpring(1, { damping: 15, stiffness: 200 });
+    }, 350);
+  }, []);
+
+  const searchStyle = useAnimatedStyle(() => ({
+    opacity: searchOpacity.value,
+    transform: [{ translateY: searchTranslateY.value }],
+  }));
+
+  const refreshStyle = useAnimatedStyle(() => ({
+    opacity: refreshOpacity.value,
+    transform: [{ scale: refreshScale.value }],
+  }));
+
+  const badgeStyle = useAnimatedStyle(() => ({
+    opacity: badgeOpacity.value,
+    transform: [{ scale: badgeScale.value }],
+  }));
 
   const accessRemaining = profile?.access_remaining ?? 0;
   const preferredFuel = profile?.preferred_fuel;
@@ -121,11 +163,13 @@ export const MapScreen = () => {
         bestStationId={bestStationId}
       />
       {!locked && (
-        <MapSearchBar
-          value={search}
-          onChange={setSearch}
-          onClear={() => setSearch('')}
-        />
+        <Animated.View style={searchStyle}>
+          <MapSearchBar
+            value={search}
+            onChange={setSearch}
+            onClear={() => setSearch('')}
+          />
+        </Animated.View>
       )}
       {(loading || status === 'loading') && (
         <View style={styles.loader}>
@@ -145,14 +189,16 @@ export const MapScreen = () => {
       )}
       <StationDetailSheet station={selectedStation} onClose={handleCloseSheet} />
       {!locked && (
-        <Pressable style={styles.refreshBtn} onPress={handleRefreshMarkers}>
-          <Ionicons name="refresh" size={18} color={colors.primary} />
-        </Pressable>
+        <Animated.View style={[styles.refreshBtn, refreshStyle]}>
+          <Pressable onPress={handleRefreshMarkers}>
+            <Ionicons name="refresh" size={18} color={colors.primary} />
+          </Pressable>
+        </Animated.View>
       )}
-      <View style={styles.accessBadge}>
+      <Animated.View style={[styles.accessBadge, badgeStyle]}>
         <Ionicons name="flash" size={12} color={colors.primary} />
         <Text style={styles.accessText}>{accessRemaining}</Text>
-      </View>
+      </Animated.View>
     </View>
   );
 };
@@ -196,7 +242,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   lockedBannerBtnText: {
-    color: '#0B1020',
+    color: '#011360',
     fontSize: 12,
     fontWeight: '700',
   },

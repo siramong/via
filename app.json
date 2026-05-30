@@ -18,7 +18,7 @@
         {
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#0B0F1A"
+          "backgroundColor": "#011360"
         }
       ],
       [
@@ -47,7 +47,7 @@
     "android": {
       "package": "com.siramong.via",
       "adaptiveIcon": {
-        "backgroundColor": "#0B0F1A",
+        "backgroundColor": "#011360",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

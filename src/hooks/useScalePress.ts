@@ -1,20 +1,24 @@
+import { useCallback } from 'react';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { useRef, useCallback } from 'react';
-import { Animated } from 'react-native';
 
 export const useScalePress = (scaleTo = 0.96) => {
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   const onPressIn = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    Animated.spring(scale, { toValue: scaleTo, useNativeDriver: true }).start();
+    scale.value = withSpring(scaleTo, { damping: 15, stiffness: 200 });
   }, [scale, scaleTo]);
 
   const onPressOut = useCallback(() => {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+    scale.value = withSpring(1, { damping: 15, stiffness: 200 });
   }, [scale]);
 
-  return { scale, onPressIn, onPressOut };
+  return { animatedStyle, onPressIn, onPressOut };
 };
 
 export const useHapticsOnly = () => {

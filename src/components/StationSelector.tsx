@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -13,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { findNearbyRealStations, ensureStation } from '../services/pricing';
 import { Button } from './ui/Button';
@@ -56,15 +56,21 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const translateY = useSharedValue(SHEET_HEIGHT);
+  const backdropOpacity = useSharedValue(0);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
-      Animated.timing(backdropOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
-  }, [translateY, backdropOpacity]);
+    translateY.value = withSpring(0, { damping: 22, stiffness: 200 });
+    backdropOpacity.value = withTiming(1, { duration: 200 });
+  }, []);
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: backdropOpacity.value,
+  }));
 
   const loadStations = useCallback(async () => {
     if (!userCoords) {
@@ -122,7 +128,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
   return (
     <Modal transparent animationType="none" visible onRequestClose={onClose}>
       <View style={styles.wrapper} pointerEvents="box-none">
-        <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
         <KeyboardAvoidingView
@@ -132,7 +138,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
           <Animated.View
             style={[
               styles.sheet,
-              { transform: [{ translateY }] },
+              sheetStyle,
             ]}
           >
             <View style={styles.headerSection}>

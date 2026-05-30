@@ -44,8 +44,8 @@ const LEAFLET_HTML = `
     .user-loc-dot {
       width: 12px; height: 12px;
       border-radius: 50%;
-      background: #4CC9F0;
-      border: 2px solid #0B1020;
+      background: #034af8;
+      border: 2px solid #011360;
       position: absolute;
       top: -6px; left: -6px;
     }
@@ -76,10 +76,10 @@ const LEAFLET_HTML = `
       data.forEach(function(m) {
         var isSelected = m.stationId === selectedId;
         var isBest = m.stationId === bestId;
-        var borderColor = isBest ? '#FFD700' : (isSelected ? '#35D07F' : '#4CC9F0');
-        var bgBadge = isBest ? '#FFD700' : (isSelected ? '#35D07F' : '#121A2E');
-        var textColor = isBest ? '#0B1020' : (isSelected ? '#0B1020' : '#4CC9F0');
-        var iconColor = isBest ? '#0B1020' : (isSelected ? '#0B1020' : '#4CC9F0');
+        var borderColor = isBest ? '#FFD700' : (isSelected ? '#35D07F' : '#034af8');
+        var bgBadge = isBest ? '#FFD700' : (isSelected ? '#35D07F' : '#021A70');
+        var textColor = isBest ? '#011360' : (isSelected ? '#011360' : '#034af8');
+        var iconColor = isBest ? '#011360' : (isSelected ? '#011360' : '#034af8');
 
         var starHtml = isBest ? '<span style="position:absolute;top:-8px;right:-8px;font-size:14px;z-index:1">\\u2B50</span>' : '';
         var html = '<div style="display:flex;flex-direction:column;align-items:center;position:relative">' + starHtml +

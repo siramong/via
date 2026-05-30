@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FuelCard } from '../components/FuelCard';
 import { MapBackground } from '../components/MapView';
@@ -32,6 +33,56 @@ export const HomeScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const preferredFuel = profile?.preferred_fuel;
   const prevFuelRef = useRef(preferredFuel);
+  const hasAnimated = useRef(false);
+
+  const greetingOpacity = useSharedValue(0);
+  const greetingTranslateY = useSharedValue(16);
+  const titleOpacity = useSharedValue(0);
+  const titleTranslateY = useSharedValue(16);
+  const badgeOpacity = useSharedValue(0);
+  const cardOpacity = useSharedValue(0);
+  const cardTranslateY = useSharedValue(24);
+
+  useEffect(() => {
+    if (hasAnimated.current) return;
+    hasAnimated.current = true;
+
+    greetingOpacity.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
+    greetingTranslateY.value = withTiming(0, { duration: 350, easing: Easing.out(Easing.cubic) });
+
+    setTimeout(() => {
+      titleOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+      titleTranslateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
+    }, 150);
+
+    setTimeout(() => {
+      badgeOpacity.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.cubic) });
+    }, 300);
+
+    setTimeout(() => {
+      cardOpacity.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) });
+      cardTranslateY.value = withSpring(0, { damping: 18, stiffness: 180 });
+    }, 450);
+  }, []);
+
+  const greetingStyle = useAnimatedStyle(() => ({
+    opacity: greetingOpacity.value,
+    transform: [{ translateY: greetingTranslateY.value }],
+  }));
+
+  const titleStyle = useAnimatedStyle(() => ({
+    opacity: titleOpacity.value,
+    transform: [{ translateY: titleTranslateY.value }],
+  }));
+
+  const badgeStyle = useAnimatedStyle(() => ({
+    opacity: badgeOpacity.value,
+  }));
+
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
+    transform: [{ translateY: cardTranslateY.value }],
+  }));
 
   useEffect(() => {
     if (profile && needsOnboarding(profile)) {
@@ -61,7 +112,6 @@ export const HomeScreen = () => {
       const best = await getBestStation(coords, preferredFuel);
       setBestStationResult(best);
     } catch {
-      // silently fail
     } finally {
       setRefreshing(false);
     }
@@ -107,21 +157,21 @@ export const HomeScreen = () => {
       >
         <View style={styles.welcomeRow}>
           <View>
-            <Text style={styles.greeting}>
+            <Animated.Text style={[styles.greeting, greetingStyle]}>
               {profile?.display_name ? `Hola, ${profile.display_name.split(' ')[0]}` : 'Hola'}
-            </Text>
-            <Text style={styles.title}>Mejor cerca</Text>
+            </Animated.Text>
+            <Animated.Text style={[styles.title, titleStyle]}>Mejor cerca</Animated.Text>
           </View>
           {preferredFuel && (
-            <View style={styles.fuelBadge}>
+            <Animated.View style={[styles.fuelBadge, badgeStyle]}>
               <Text style={styles.fuelBadgeText}>{FUEL_DISPLAY[preferredFuel]}</Text>
-            </View>
+            </Animated.View>
           )}
         </View>
         {bestStationResult && (
-          <View style={styles.featuredCard}>
+          <Animated.View style={[styles.featuredCard, cardStyle]}>
             <FuelCard result={bestStationResult} />
-          </View>
+          </Animated.View>
         )}
       </ScrollView>
       {!coords && (

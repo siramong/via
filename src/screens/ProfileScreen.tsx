@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
   Modal,
   Pressable,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -54,6 +54,78 @@ export const ProfileScreen = () => {
   const [reportsLoading, setReportsLoading] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
   const [editName, setEditName] = useState('');
+  const hasAnimated = useRef(false);
+
+  const headerOpacity = useSharedValue(0);
+  const headerTranslateY = useSharedValue(16);
+  const accessOpacity = useSharedValue(0);
+  const accessTranslateY = useSharedValue(16);
+  const statsOpacity = useSharedValue(0);
+  const statsTranslateY = useSharedValue(16);
+  const section1Opacity = useSharedValue(0);
+  const section2Opacity = useSharedValue(0);
+  const section3Opacity = useSharedValue(0);
+  const section4Opacity = useSharedValue(0);
+  const signOutOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (hasAnimated.current) return;
+    hasAnimated.current = true;
+
+    headerOpacity.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
+    headerTranslateY.value = withTiming(0, { duration: 350, easing: Easing.out(Easing.cubic) });
+
+    setTimeout(() => {
+      accessOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+      accessTranslateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
+    }, 150);
+
+    setTimeout(() => {
+      statsOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+      statsTranslateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
+    }, 300);
+
+    setTimeout(() => {
+      section1Opacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+    }, 450);
+
+    setTimeout(() => {
+      section2Opacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+    }, 550);
+
+    setTimeout(() => {
+      section3Opacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+    }, 650);
+
+    setTimeout(() => {
+      section4Opacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+    }, 750);
+
+    setTimeout(() => {
+      signOutOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+    }, 850);
+  }, []);
+
+  const headerStyle = useAnimatedStyle(() => ({
+    opacity: headerOpacity.value,
+    transform: [{ translateY: headerTranslateY.value }],
+  }));
+
+  const accessStyle = useAnimatedStyle(() => ({
+    opacity: accessOpacity.value,
+    transform: [{ translateY: accessTranslateY.value }],
+  }));
+
+  const statsStyle = useAnimatedStyle(() => ({
+    opacity: statsOpacity.value,
+    transform: [{ translateY: statsTranslateY.value }],
+  }));
+
+  const section1Style = useAnimatedStyle(() => ({ opacity: section1Opacity.value }));
+  const section2Style = useAnimatedStyle(() => ({ opacity: section2Opacity.value }));
+  const section3Style = useAnimatedStyle(() => ({ opacity: section3Opacity.value }));
+  const section4Style = useAnimatedStyle(() => ({ opacity: section4Opacity.value }));
+  const signOutStyle = useAnimatedStyle(() => ({ opacity: signOutOpacity.value }));
 
   useEffect(() => {
     if (!profile) return;
@@ -104,32 +176,36 @@ export const ProfileScreen = () => {
       <MapBackground />
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }]}>
         {/* Header with avatar */}
-        <View style={styles.header}>
-          <LinearGradient
-            colors={['#4CC9F0', '#8CF4FF']}
-            style={styles.avatar}
-          >
-            <Text style={styles.avatarText}>{getInitials(profile.display_name)}</Text>
-          </LinearGradient>
-          <View style={styles.headerInfo}>
-            <Text style={styles.title}>Perfil</Text>
-            <Pressable onPress={handleOpenNameEdit} style={styles.nameRow}>
-              <Text style={styles.displayName}>{profile.display_name}</Text>
-              <Ionicons name="pencil" size={14} color={colors.textMuted} />
-            </Pressable>
+        <Animated.View style={headerStyle}>
+          <View style={styles.header}>
+            <LinearGradient
+              colors={['#034af8', '#4A7AF8']}
+              style={styles.avatar}
+            >
+              <Text style={styles.avatarText}>{getInitials(profile.display_name)}</Text>
+            </LinearGradient>
+            <View style={styles.headerInfo}>
+              <Text style={styles.title}>Perfil</Text>
+              <Pressable onPress={handleOpenNameEdit} style={styles.nameRow}>
+                <Text style={styles.displayName}>{profile.display_name}</Text>
+                <Ionicons name="pencil" size={14} color={colors.textMuted} />
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </Animated.View>
 
-        <AccessCounter remaining={profile.access_remaining} />
+        <Animated.View style={accessStyle}>
+          <AccessCounter remaining={profile.access_remaining} />
+        </Animated.View>
 
         {/* Stats */}
-        <View style={styles.stats}>
+        <Animated.View style={[styles.stats, statsStyle]}>
           <StatCard icon="shield-checkmark" label="Reputación" value={profile.reputation.toString()} />
           <StatCard icon="calendar" label="Registrado" value={formatDate(profile.created_at)} />
-        </View>
+        </Animated.View>
 
         {/* Preferred Fuel */}
-        <View style={styles.section}>
+        <Animated.View style={[styles.section, section1Style]}>
           <View style={styles.sectionHeader}>
             <Ionicons name="car" size={16} color={colors.primary} />
             <Text style={styles.sectionTitle}>Combustible preferido</Text>
@@ -137,7 +213,7 @@ export const ProfileScreen = () => {
           <Text style={styles.bodyText}>
             Selecciona el tipo de combustible que usa tu vehículo. Las estaciones mostrarán primero los precios de tu combustible preferido.
           </Text>
-          <Animated.View style={[styles.fuelOptions, { transform: [{ scale: fuelOptionScale.scale }] }]}>
+          <Animated.View style={[styles.fuelOptions, fuelOptionScale.animatedStyle]}>
             {([null, 'ecopais', 'super', 'diesel'] as const).map((fuel) => {
               const selected = profile.preferred_fuel === fuel;
               const label = fuel ? FUEL_DISPLAY[fuel] : 'Todos';
@@ -156,10 +232,10 @@ export const ProfileScreen = () => {
               );
             })}
           </Animated.View>
-        </View>
+        </Animated.View>
 
         {/* Contribution history */}
-        <View style={styles.section}>
+        <Animated.View style={[styles.section, section2Style]}>
           <View style={styles.sectionHeader}>
             <Ionicons name="time" size={16} color={colors.primary} />
             <Text style={styles.sectionTitle}>Reportes recientes</Text>
@@ -179,19 +255,19 @@ export const ProfileScreen = () => {
                     <Text style={styles.reportDate}>{formatDate(r.created_at)}</Text>
                   </View>
                   <Badge variant={statusBadgeVariant(r.status)} label={
-    r.status === 'approved' ? 'aprobado' :
-    r.status === 'rejected' ? 'rechazado' :
-    r.status === 'pending' ? 'pendiente' :
-    r.status
-  } />
+      r.status === 'approved' ? 'aprobado' :
+      r.status === 'rejected' ? 'rechazado' :
+      r.status === 'pending' ? 'pendiente' :
+      r.status
+    } />
                 </View>
               ))}
             </View>
           )}
-        </View>
+        </Animated.View>
 
         {/* Get more access */}
-        <View style={styles.section}>
+        <Animated.View style={[styles.section, section3Style]}>
           <View style={styles.sectionHeader}>
             <Ionicons name="key" size={16} color={colors.primary} />
             <Text style={styles.sectionTitle}>Obtener más accesos</Text>
@@ -200,7 +276,7 @@ export const ProfileScreen = () => {
             Gana puntos de acceso contribuyendo precios verificados.
           </Text>
           <View style={styles.accessOptions}>
-            <Animated.View style={{ transform: [{ scale: accessOptionScale.scale }] }}>
+            <Animated.View style={accessOptionScale.animatedStyle}>
               <AccessOption
                 icon="camera"
                 title="Enviar un reporte"
@@ -209,10 +285,10 @@ export const ProfileScreen = () => {
               />
             </Animated.View>
           </View>
-        </View>
+        </Animated.View>
 
         {/* How it works */}
-        <View style={styles.infoCard}>
+        <Animated.View style={[styles.infoCard, section4Style]}>
           <View style={styles.infoHeader}>
             <Ionicons name="star" size={16} color={colors.primary} />
             <Text style={styles.infoTitle}>Cómo funciona</Text>
@@ -223,10 +299,10 @@ export const ProfileScreen = () => {
           <Text style={styles.bodyText}>
             Contribuye precios verificados para recuperar accesos y aumentar tu reputación.
           </Text>
-        </View>
+        </Animated.View>
 
         {/* Sign out */}
-        <Animated.View style={{ transform: [{ scale: signOutScale.scale }] }}>
+        <Animated.View style={[signOutScale.animatedStyle, signOutStyle]}>
           <Pressable style={styles.dangerButton} onPress={handleSignOut} onPressIn={signOutScale.onPressIn} onPressOut={signOutScale.onPressOut} disabled={status === 'loading'}>
             {status === 'loading' ? (
               <ActivityIndicator color={colors.danger} />

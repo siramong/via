@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  Animated,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,16 +30,69 @@ export const AuthScreen = () => {
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [signupSuccess, setSignupSuccess] = useState(false);
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(12)).current;
-  const googleScale = useScalePress(0.97);
+  const [tabsWidth, setTabsWidth] = useState(0);
+
+  const logoOpacity = useSharedValue(0);
+  const logoTranslateY = useSharedValue(20);
+  const taglineOpacity = useSharedValue(0);
+  const taglineTranslateY = useSharedValue(16);
+  const cardOpacity = useSharedValue(0);
+  const cardTranslateY = useSharedValue(24);
+  const googleOpacity = useSharedValue(0);
+  const tabPosition = useSharedValue(0);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
-    ]).start();
-  }, [opacity, translateY]);
+    tabPosition.value = withTiming(mode === 'signup' ? 1 : 0, {
+      duration: 250,
+      easing: Easing.inOut(Easing.ease),
+    });
+  }, [mode]);
+
+  useEffect(() => {
+    logoOpacity.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) });
+    logoTranslateY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) });
+
+    setTimeout(() => {
+      taglineOpacity.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
+      taglineTranslateY.value = withTiming(0, { duration: 350, easing: Easing.out(Easing.cubic) });
+    }, 150);
+
+    setTimeout(() => {
+      cardOpacity.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) });
+      cardTranslateY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) });
+    }, 350);
+
+    setTimeout(() => {
+      googleOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
+    }, 600);
+  }, []);
+
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+    transform: [{ translateY: logoTranslateY.value }],
+  }));
+
+  const taglineStyle = useAnimatedStyle(() => ({
+    opacity: taglineOpacity.value,
+    transform: [{ translateY: taglineTranslateY.value }],
+  }));
+
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
+    transform: [{ translateY: cardTranslateY.value }],
+  }));
+
+  const googleStyle = useAnimatedStyle(() => ({
+    opacity: googleOpacity.value,
+  }));
+
+  const indicatorStyle = useAnimatedStyle(() => {
+    const tabW = tabsWidth > 4 ? (tabsWidth - 4) / 2 : 0;
+    return {
+      transform: [{ translateX: tabPosition.value * tabW }],
+      width: tabW,
+    };
+  });
 
   const switchMode = useCallback((newMode: 'login' | 'signup') => {
     setMode(newMode);
@@ -119,12 +173,12 @@ export const AuthScreen = () => {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#0B1020', '#121A2E', '#0B1020']}
+        colors={['#060C28', '#0A1450', '#021A70', '#011360']}
         style={StyleSheet.absoluteFill}
       />
       <LinearGradient
-        colors={['rgba(76, 201, 240, 0.06)', 'transparent']}
-        style={[StyleSheet.absoluteFill, { top: 0, height: '45%' }]}
+        colors={['rgba(3, 74, 248, 0.15)', 'rgba(3, 74, 248, 0.04)', 'transparent']}
+        style={[StyleSheet.absoluteFill, { top: 0, height: '50%' }]}
         pointerEvents="none"
       />
       <KeyboardAvoidingView
@@ -135,26 +189,21 @@ export const AuthScreen = () => {
           contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xl }]}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.brandRow}>
-            <View style={styles.logo}>
-              <Ionicons name="navigate" size={20} color={colors.textPrimary} />
-            </View>
+          <Animated.View style={[styles.brandRow, logoStyle]}>
+            <Image source={require('../../assets/android-icon-foreground.png')} style={styles.logoImage} />
             <Text style={styles.appName}>VIA</Text>
-          </View>
-          <Text style={styles.tagline}>Precios de combustible en vivo impulsados por tu ciudad.</Text>
+          </Animated.View>
+          <Animated.View style={taglineStyle}>
+            <Text style={styles.tagline}>Precios de combustible en vivo impulsados por tu ciudad.</Text>
+          </Animated.View>
 
-          <Animated.View style={[styles.authCard, { opacity, transform: [{ translateY }] }]}>
-            <View style={styles.modeTabs}>
-              <Pressable
-                style={[styles.modeTab, mode === 'login' && styles.modeTabActive]}
-                onPress={() => switchMode('login')}
-              >
+          <Animated.View style={[styles.authCard, cardStyle]}>
+            <View style={styles.modeTabs} onLayout={(e) => setTabsWidth(e.nativeEvent.layout.width)}>
+              <Animated.View style={[styles.tabIndicator, indicatorStyle]} />
+              <Pressable style={styles.modeTab} onPress={() => switchMode('login')}>
                 <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>Iniciar sesión</Text>
               </Pressable>
-              <Pressable
-                style={[styles.modeTab, mode === 'signup' && styles.modeTabActive]}
-                onPress={() => switchMode('signup')}
-              >
+              <Pressable style={styles.modeTab} onPress={() => switchMode('signup')}>
                 <Text style={[styles.modeTabText, mode === 'signup' && styles.modeTabTextActive]}>
                   Crear cuenta
                 </Text>
@@ -224,21 +273,31 @@ export const AuthScreen = () => {
               <View style={styles.dividerLine} />
             </View>
 
-            <Animated.View style={{ transform: [{ scale: googleScale.scale }] }}>
-              <Button
-                title="Continuar con Google"
-                icon="logo-google"
-                variant="secondary"
-                onPress={handleGoogleSignIn}
-                loading={status === 'loading'}
-                disabled={status === 'loading'}
-                size="md"
-              />
+            <Animated.View style={googleStyle}>
+              <GoogleButton onPress={handleGoogleSignIn} loading={status === 'loading'} />
             </Animated.View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
+  );
+};
+
+const GoogleButton = ({ onPress, loading }: { onPress: () => void; loading: boolean }) => {
+  const { animatedStyle, onPressIn, onPressOut } = useScalePress(0.97);
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Button
+        title="Continuar con Google"
+        icon="logo-google"
+        variant="secondary"
+        onPress={onPress}
+        loading={loading}
+        disabled={loading}
+        size="md"
+      />
+    </Animated.View>
   );
 };
 
@@ -255,13 +314,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  logo: {
+  logoImage: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 10,
   },
   appName: {
     color: colors.textPrimary,
@@ -294,21 +350,26 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: spacing.md,
   },
+  tabIndicator: {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    left: 4,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+  },
   modeTab: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 999,
     alignItems: 'center',
-  },
-  modeTabActive: {
-    backgroundColor: colors.primary,
+    zIndex: 1,
   },
   modeTabText: {
     color: colors.textSecondary,
     fontWeight: '600',
   },
   modeTabTextActive: {
-    color: colors.background,
+    color: colors.textPrimary,
   },
   successCard: {
     alignItems: 'center',

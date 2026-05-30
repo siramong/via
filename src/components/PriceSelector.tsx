@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, typography } from '../theme';
@@ -12,13 +12,17 @@ type Props = {
 };
 
 export const PriceSelector = ({ label, value, step = 0.01, onChange }: Props) => {
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   const animate = () => {
-    Animated.sequence([
-      Animated.timing(scale, { toValue: 0.97, duration: 50, useNativeDriver: true }),
-      Animated.timing(scale, { toValue: 1, duration: 100, useNativeDriver: true }),
-    ]).start();
+    scale.value = withSequence(
+      withTiming(0.97, { duration: 50 }),
+      withTiming(1, { duration: 100 }),
+    );
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
 
@@ -32,7 +36,7 @@ export const PriceSelector = ({ label, value, step = 0.01, onChange }: Props) =>
   };
 
   return (
-    <Animated.View style={[styles.container, { transform: [{ scale }] }]}>
+    <Animated.View style={[styles.container, animatedStyle]}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.controls}>
         <Pressable style={styles.button} onPress={decrement}>

@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Linking, Share, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { Linking, Share, StyleSheet, Text, View } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, Easing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { colors, radius, shadows, spacing, typography } from '../theme';
@@ -23,19 +24,22 @@ const freshnessBadge = (freshness: Freshness) => {
 };
 
 export const FuelCard = ({ result }: Props) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(12)).current;
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(16);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 250, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 250, useNativeDriver: true }),
-    ]).start();
-  }, [opacity, translateY]);
+    opacity.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
+    translateY.value = withSpring(0, { damping: 18, stiffness: 180 });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
 
   if (!result) {
     return (
-      <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
+      <Animated.View style={[styles.card, animatedStyle]}>
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIcon}>
             <Ionicons name="search-outline" size={28} color={colors.textMuted} />
@@ -61,7 +65,7 @@ export const FuelCard = ({ result }: Props) => {
   };
 
   return (
-    <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
+    <Animated.View style={[styles.card, animatedStyle]}>
       <View style={styles.topRow}>
         <Text style={styles.label}>Mejor estación</Text>
         <Badge variant="info" label={`Confianza ${result.trustScore}`} icon="shield-checkmark" />

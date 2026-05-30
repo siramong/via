@@ -255,19 +255,6 @@ export const ContributeScreen = () => {
               )}
             </Card>
 
-            {ocrDone && ocrRawText && (
-              <Card variant="glass" style={{ marginTop: spacing.md }}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="text" size={18} color={colors.warning} />
-                  <Text style={styles.sectionTitle}>Texto OCR Crudo</Text>
-                </View>
-                <Text style={styles.ocrRawText}>{ocrRawText}</Text>
-                {!!ocrError && (
-                  <Text style={[styles.error, { marginTop: spacing.xs }]}>Error: {ocrError}</Text>
-                )}
-              </Card>
-            )}
-
             <Card variant="glass" style={{ marginTop: spacing.md }}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="location" size={18} color={colors.primary} />

@@ -4,21 +4,18 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { findNearbyRealStations, ensureStation } from '../services/pricing';
+import { stationRepository } from '../services/stationRepository';
 import { Button } from './ui/Button';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import type { StationMarker } from '../types';
-import type { RealtimeStation } from '../types';
 import type { Coordinates } from '../services/location';
 
 const SHEET_HEIGHT = 420;
@@ -35,26 +32,10 @@ const formatDistance = (meters: number) => {
   return `${(meters / 1000).toFixed(1)} km`;
 };
 
-const haversineDistance = (a: Coordinates, b: { latitude: number; longitude: number }): number => {
-  const R = 6371000;
-  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
-  const dLng = ((b.longitude - a.longitude) * Math.PI) / 180;
-  const sinDLat = Math.sin(dLat / 2);
-  const sinDLng = Math.sin(dLng / 2);
-  const aVal =
-    sinDLat * sinDLat +
-    Math.cos((a.latitude * Math.PI) / 180) *
-      Math.cos((b.latitude * Math.PI) / 180) *
-      sinDLng * sinDLng;
-  return R * 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
-};
-
 export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: Props) => {
-  const insets = useSafeAreaInsets();
-  const [realStations, setRealStations] = useState<RealtimeStation[]>([]);
+  const [stations, setStations] = useState<StationMarker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [savingId, setSavingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const translateY = useSharedValue(SHEET_HEIGHT);
   const backdropOpacity = useSharedValue(0);
@@ -80,13 +61,13 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
     }
     setLoading(true);
     setError(null);
-    setRealStations([]);
+    setStations([]);
     try {
-      const stations = await findNearbyRealStations(userCoords);
-      if (stations.length === 0) {
+      const results = await stationRepository.getNearbyStations(userCoords, 10000, 50);
+      if (results.length === 0) {
         setError('No se encontraron estaciones en un radio amplio. Prueba otra ubicación.');
       } else {
-        setRealStations(stations);
+        setStations(results);
       }
     } catch (err) {
       setError((err as Error).message);
@@ -100,27 +81,18 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
   }, [loadStations]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return realStations;
+    if (!search.trim()) return stations;
     const q = search.toLowerCase();
-    return realStations.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) || s.address.toLowerCase().includes(q),
+    return stations.filter(
+      (s) => s.name.toLowerCase().includes(q),
     );
-  }, [realStations, search]);
+  }, [stations, search]);
 
   const handleSelect = useCallback(
-    async (realStation: RealtimeStation) => {
-      setSavingId(realStation.placeId);
-      try {
-        const marker = await ensureStation(realStation);
-        onSelect(marker);
-      } catch {
-        setError('No se pudo guardar la estación. Asegúrate de que las migraciones estén aplicadas e inténtalo de nuevo.');
-      } finally {
-        setSavingId(null);
-      }
+    (station: StationMarker) => {
+      onSelect(station);
     },
-    [onSelect, userCoords],
+    [onSelect],
   );
 
   const hasStations = filtered.length > 0;
@@ -199,46 +171,32 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
               {!loading && hasStations && (
                 <FlatList
                   data={filtered}
-                  keyExtractor={(item: RealtimeStation) => item.placeId}
+                  keyExtractor={(item: StationMarker) => item.stationId}
                   keyboardShouldPersistTaps="handled"
                   style={styles.list}
                   contentContainerStyle={styles.listContent}
-                  renderItem={({ item }: { item: RealtimeStation }) => {
-                    const isSaving = savingId === item.placeId;
-                    const dist = userCoords ? haversineDistance(userCoords, item) : 0;
-                    return (
+                  renderItem={({ item }: { item: StationMarker }) => (
                       <Pressable
-                        style={[styles.station, isSaving && styles.stationSaving]}
+                        style={styles.station}
                         onPress={() => handleSelect(item)}
-                        disabled={isSaving}
                       >
                         <View style={styles.radio}>
-                          {isSaving ? (
-                            <ActivityIndicator size="small" color={colors.primary} />
-                          ) : (
-                            <Ionicons name="location" size={16} color={colors.textMuted} />
-                          )}
+                          <Ionicons name="location" size={16} color={colors.textMuted} />
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={styles.stationName} numberOfLines={1}>
                             {item.name}
                           </Text>
-                          {item.address ? (
-                            <Text style={styles.stationAddress} numberOfLines={1}>
-                              {item.address}
-                            </Text>
-                          ) : null}
                           <View style={styles.stationMeta}>
                             <Ionicons name="navigate" size={12} color={colors.textMuted} />
                             <Text style={styles.stationDist}>
-                              {formatDistance(dist)}
+                              {formatDistance(item.distanceMeters)}
                             </Text>
                           </View>
                         </View>
                         <Ionicons name="add-circle" size={22} color={colors.primary} />
                       </Pressable>
-                    );
-                  }}
+                    )}
                 />
               )}
             </View>
@@ -323,9 +281,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
   },
-  stationSaving: {
-    opacity: 0.6,
-  },
   radio: {
     width: 36,
     height: 36,
@@ -337,11 +292,6 @@ const styles = StyleSheet.create({
   stationName: {
     ...typography.bodyBold,
     color: colors.textPrimary,
-  },
-  stationAddress: {
-    ...typography.caption,
-    color: colors.textMuted,
-    marginTop: 1,
   },
   stationMeta: {
     flexDirection: 'row',

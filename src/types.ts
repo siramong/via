@@ -14,6 +14,9 @@ export type StationResult = {
   distanceMeters: number;
   trustScore: number;
   freshness: Freshness;
+  brand?: string;
+  city?: string;
+  province?: string;
 };
 
 export type StationMarker = {
@@ -26,14 +29,9 @@ export type StationMarker = {
   fuelType?: FuelType;
   freshness?: Freshness;
   trustScore?: number;
-};
-
-export type RealtimeStation = {
-  placeId: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  address: string;
+  brand?: string;
+  city?: string;
+  province?: string;
 };
 
 export type UserProfile = {

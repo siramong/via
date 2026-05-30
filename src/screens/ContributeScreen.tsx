@@ -21,6 +21,7 @@ import { Badge } from '../components/ui/Badge';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { colors, radius, spacing, typography } from '../theme';
 import { supabase } from '../services/supabase';
+import { stationRepository } from '../services/stationRepository';
 import { useUserStore } from '../state/userStore';
 import { useLocationStore } from '../state/locationStore';
 import { toast } from '../state/toastStore';
@@ -39,7 +40,10 @@ export const ContributeScreen = () => {
   const [showStationPicker, setShowStationPicker] = useState(false);
   const [ocrDone, setOcrDone] = useState(false);
   const [ocrRawText, setOcrRawText] = useState<string>('');
+  const [ocrConfidence, setOcrConfidence] = useState<number>(0);
   const [ocrError, setOcrError] = useState<string>('');
+  const [stationsNearby, setStationsNearby] = useState<StationMarker[]>([]);
+  const [stationsLoading, setStationsLoading] = useState(false);
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(14);
 
@@ -54,6 +58,31 @@ export const ContributeScreen = () => {
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }],
   }));
+
+  const loadNearbyAndAutoSelect = useCallback(async () => {
+    if (!coords) return;
+    setStationsLoading(true);
+    try {
+      const stations = await stationRepository.getNearbyStations(coords, 10000, 50);
+      setStationsNearby(stations);
+      if (stations.length > 0 && !selectedStation) {
+        const closest = stations[0];
+        if (closest.distanceMeters <= 1000) {
+          setSelectedStation(closest);
+        }
+      }
+    } catch {
+      setStationsNearby([]);
+    } finally {
+      setStationsLoading(false);
+    }
+  }, [coords, selectedStation]);
+
+  useEffect(() => {
+    if (step === 'review' && coords) {
+      loadNearbyAndAutoSelect();
+    }
+  }, [step, coords, loadNearbyAndAutoSelect]);
 
   const pickImage = useCallback(async () => {
     setLoading(true);
@@ -115,6 +144,7 @@ export const ContributeScreen = () => {
       const { output } = await runOcrWithRetries(uri);
       setPrices(output.prices);
       setOcrRawText(output.rawText || '(empty)');
+      setOcrConfidence(output.confidence);
       if (output.error) {
         setOcrError(output.error);
       }
@@ -137,7 +167,11 @@ export const ContributeScreen = () => {
   };
 
   const submitReport = useCallback(async () => {
-    if (!imageUri || !session || !profile) return;
+    if (!imageUri || !session || !profile || !coords) return;
+    if (!selectedStation) {
+      setError('Debes seleccionar una estación para continuar.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -152,11 +186,20 @@ export const ContributeScreen = () => {
 
       if (uploadError) throw uploadError;
 
+      const imagePath = uploadData?.path ?? filename;
+      const { data: { publicUrl } } = supabase.storage
+        .from('reports')
+        .getPublicUrl(imagePath);
+
       const { error: reportError } = await supabase.from('reports').insert({
         user_id: profile.id,
-        image_url: uploadData?.path ?? filename,
+        image_url: publicUrl,
         ocr_json: prices,
-        station_id: selectedStation?.stationId ?? null,
+        ocr_raw_text: ocrRawText || null,
+        ocr_confidence: ocrConfidence > 0 ? ocrConfidence : null,
+        station_id: selectedStation.stationId,
+        reported_lat: coords.latitude,
+        reported_lng: coords.longitude,
         status: 'pending',
       });
 
@@ -168,13 +211,17 @@ export const ContributeScreen = () => {
       setImageUri(null);
       setPrices({});
       setSelectedStation(null);
+      setOcrRawText('');
+      setOcrConfidence(0);
+      setOcrError('');
+      setStationsNearby([]);
       setStep('camera');
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [imageUri, session, profile, prices, selectedStation, grantAccess]);
+  }, [imageUri, session, profile, prices, selectedStation, grantAccess, coords, ocrRawText, ocrConfidence]);
 
   const resetAll = useCallback(() => {
     setStep('camera');
@@ -183,10 +230,14 @@ export const ContributeScreen = () => {
     setSelectedStation(null);
     setError(null);
     setOcrRawText('');
+    setOcrConfidence(0);
     setOcrError('');
+    setStationsNearby([]);
   }, []);
 
   const hasPrices = Object.values(prices).some((v) => typeof v === 'number' && v > 0);
+  const hasStationsAvailable = !stationsLoading && stationsNearby.length > 0;
+  const canContinue = hasPrices && (!hasStationsAvailable || selectedStation != null);
   const allFuelTypes: FuelType[] = ['ecopais', 'super', 'diesel'];
 
   return (
@@ -281,7 +332,7 @@ export const ContributeScreen = () => {
                 title="Continuar"
                 variant="primary"
                 icon="arrow-forward"
-                disabled={!hasPrices}
+                disabled={!canContinue}
                 onPress={() => setStep('confirm')}
                 size="md"
                 style={{ flex: 1 }}
@@ -303,13 +354,13 @@ export const ContributeScreen = () => {
                 <Text style={styles.confirmPhotoText}>Foto capturada</Text>
               </View>
 
-              {selectedStation && (
-                <View style={styles.confirmRow}>
-                  <Ionicons name="location" size={16} color={colors.textSecondary} />
-                  <Text style={styles.confirmLabel}>Estación:</Text>
-                  <Text style={styles.confirmValue} numberOfLines={1}>{selectedStation.name}</Text>
-                </View>
-              )}
+              <View style={styles.confirmRow}>
+                <Ionicons name="location" size={16} color={colors.textSecondary} />
+                <Text style={styles.confirmLabel}>Estación:</Text>
+                <Text style={styles.confirmValue} numberOfLines={1}>
+                  {selectedStation?.name ?? 'No seleccionada'}
+                </Text>
+              </View>
 
               <View style={styles.confirmPrices}>
                 <Text style={styles.confirmPricesLabel}>Precios</Text>

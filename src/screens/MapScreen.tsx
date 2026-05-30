@@ -9,6 +9,7 @@ import { StationDetailSheet } from '../components/StationDetailSheet';
 import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
 import { getBestStation, getNearbyStations } from '../services/pricing';
+import { stationRepository } from '../services/stationRepository';
 import { colors, radius, spacing } from '../theme';
 import type { StationMarker } from '../types';
 
@@ -73,21 +74,19 @@ export const MapScreen = () => {
     refresh().catch(() => {});
   }, [refresh]);
 
+  // Lock state: derived from accessRemaining, no side effects
   useEffect(() => {
-    if (!coords) return;
+    setLocked(accessRemaining <= 0);
+  }, [accessRemaining]);
 
-    if (accessRemaining <= 0) {
-      setLocked(true);
-    } else {
-      setLocked(false);
-    }
-
-    if (loaded.current) return;
+  // Data loading: runs once when coords become available
+  useEffect(() => {
+    if (!coords || loaded.current) return;
     loaded.current = true;
 
     setLoading(true);
 
-    getNearbyStations(coords)
+    stationRepository.getNearbyStations(coords)
       .then((markers) => {
         setAllMarkers(markers);
         return getBestStation(coords, preferredFuel);
@@ -99,17 +98,14 @@ export const MapScreen = () => {
         setAllMarkers([]);
       })
       .finally(() => setLoading(false));
-
-    if (accessRemaining > 0) {
-      consumeAccess().catch(() => {});
-    }
-  }, [coords, accessRemaining, consumeAccess, preferredFuel]);
+  }, [coords, preferredFuel]);
 
   const handleRefreshMarkers = useCallback(() => {
     if (!coords) return;
     loaded.current = true;
+    stationRepository.invalidateNearbyCache();
     setLoading(true);
-    getNearbyStations(coords)
+    stationRepository.getNearbyStations(coords)
       .then((markers) => {
         setAllMarkers(markers);
         return getBestStation(coords, preferredFuel);

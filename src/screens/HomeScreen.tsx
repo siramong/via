@@ -15,6 +15,7 @@ import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
 import { getBestStation } from '../services/pricing';
+import { stationRepository } from '../services/stationRepository';
 import { colors, spacing } from '../theme';
 import type { StationMarker } from '../types';
 
@@ -138,6 +139,7 @@ export const HomeScreen = () => {
 
   const handleRefresh = useCallback(() => {
     refresh().catch(() => {});
+    stationRepository.invalidateNearbyCache();
     void loadBestStation(true);
   }, [refresh, loadBestStation]);
 

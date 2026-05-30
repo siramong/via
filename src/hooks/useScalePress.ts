@@ -21,9 +21,4 @@ export const useScalePress = (scaleTo = 0.96) => {
   return { animatedStyle, onPressIn, onPressOut };
 };
 
-export const useHapticsOnly = () => {
-  const trigger = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  }, []);
-  return trigger;
-};
+

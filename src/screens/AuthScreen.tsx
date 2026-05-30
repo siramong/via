@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,8 +14,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../state/userStore';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
-import { MapBackground } from '../components/MapView';
 import { useScalePress } from '../hooks/useScalePress';
+import { TextField } from '../components/ui/TextField';
+import { Button } from '../components/ui/Button';
 import { colors, radius, spacing } from '../theme';
 
 export const AuthScreen = () => {
@@ -27,10 +28,9 @@ export const AuthScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
-  const loginTabScale = useScalePress(0.95);
-  const createTabScale = useScalePress(0.95);
   const googleScale = useScalePress(0.97);
 
   useEffect(() => {
@@ -43,6 +43,7 @@ export const AuthScreen = () => {
   const switchMode = useCallback((newMode: 'login' | 'signup') => {
     setMode(newMode);
     setAuthError(null);
+    setSignupSuccess(false);
   }, []);
 
   const handleGoogleSignIn = useCallback(async () => {
@@ -73,6 +74,7 @@ export const AuthScreen = () => {
 
     setLoading(true);
     setAuthError(null);
+    setSignupSuccess(false);
 
     try {
       if (mode === 'signup') {
@@ -88,10 +90,9 @@ export const AuthScreen = () => {
         if (error) {
           setAuthError(error.message);
         } else {
-          setAuthError(null);
+          setSignupSuccess(true);
           setEmail('');
           setPassword('');
-          setMode('login');
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -99,7 +100,11 @@ export const AuthScreen = () => {
           password,
         });
         if (error) {
-          setAuthError(error.message);
+          if (error.message.includes('Email not confirmed')) {
+            setAuthError('Correo no confirmado. Revisa tu bandeja de entrada.');
+          } else {
+            setAuthError(error.message);
+          }
         }
       }
     } catch (err) {
@@ -113,146 +118,129 @@ export const AuthScreen = () => {
 
   return (
     <View style={styles.container}>
-      <MapBackground />
       <LinearGradient
-        colors={['rgba(9, 14, 28, 0.85)', 'rgba(9, 14, 28, 0.65)', 'rgba(9, 14, 28, 0.9)']}
+        colors={['#0B1020', '#121A2E', '#0B1020']}
         style={StyleSheet.absoluteFill}
       />
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]} keyboardShouldPersistTaps="handled">
-        <View style={styles.brandRow}>
-          <View style={styles.logo}>
-            <Ionicons name="navigate" size={20} color={colors.textPrimary} />
+      <LinearGradient
+        colors={['rgba(76, 201, 240, 0.06)', 'transparent']}
+        style={[StyleSheet.absoluteFill, { top: 0, height: '45%' }]}
+        pointerEvents="none"
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xl }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.brandRow}>
+            <View style={styles.logo}>
+              <Ionicons name="navigate" size={20} color={colors.textPrimary} />
+            </View>
+            <Text style={styles.appName}>VIA</Text>
           </View>
-          <Text style={styles.appName}>VIA</Text>
-        </View>
-        <Text style={styles.tagline}>Precios de combustible en vivo impulsados por tu ciudad.</Text>
+          <Text style={styles.tagline}>Precios de combustible en vivo impulsados por tu ciudad.</Text>
 
-        <View style={styles.featureList}>
-          <Feature icon="locate" text="Estaciones cercanas en tiempo real" />
-          <Feature icon="pricetags" text="Precios verificados por la comunidad" />
-          <Feature icon="camera" text="Envía una foto en segundos" />
-        </View>
-
-        <Animated.View style={[styles.authCard, { opacity, transform: [{ translateY }] }]}>
-          <View style={styles.modeTabs}>
-            <Animated.View style={{ flex: 1, transform: [{ scale: loginTabScale.scale }] }}>
+          <Animated.View style={[styles.authCard, { opacity, transform: [{ translateY }] }]}>
+            <View style={styles.modeTabs}>
               <Pressable
                 style={[styles.modeTab, mode === 'login' && styles.modeTabActive]}
                 onPress={() => switchMode('login')}
-                onPressIn={loginTabScale.onPressIn}
-                onPressOut={loginTabScale.onPressOut}
               >
                 <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>Iniciar sesión</Text>
               </Pressable>
-            </Animated.View>
-            <Animated.View style={{ flex: 1, transform: [{ scale: createTabScale.scale }] }}>
               <Pressable
                 style={[styles.modeTab, mode === 'signup' && styles.modeTabActive]}
                 onPress={() => switchMode('signup')}
-                onPressIn={createTabScale.onPressIn}
-                onPressOut={createTabScale.onPressOut}
               >
                 <Text style={[styles.modeTabText, mode === 'signup' && styles.modeTabTextActive]}>
                   Crear cuenta
                 </Text>
               </Pressable>
-            </Animated.View>
-          </View>
-
-          <View style={styles.inputRow}>
-            <Ionicons name="mail" size={18} color={colors.textSecondary} />
-            <TextInput
-              style={styles.input}
-              placeholder="Correo electrónico"
-              placeholderTextColor={colors.textSecondary}
-              value={email}
-              onChangeText={setEmail}
-              editable={!loading}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.inputRow}>
-            <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
-            <TextInput
-              style={styles.input}
-              placeholder="Contraseña"
-              placeholderTextColor={colors.textSecondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              editable={!loading}
-            />
-            <Pressable onPress={() => setShowPassword((p) => !p)} hitSlop={8}>
-              <Ionicons
-                name={showPassword ? 'eye-off' : 'eye'}
-                size={18}
-                color={colors.textMuted}
-              />
-            </Pressable>
-          </View>
-
-          {!!displayError && (
-            <View style={styles.errorCard}>
-              <Ionicons name="alert-circle" size={14} color={colors.danger} />
-              <Text style={styles.errorText}>{displayError}</Text>
             </View>
-          )}
 
-          <Pressable onPress={handleEmailAuth} disabled={loading} style={styles.primaryButton}>
-            <LinearGradient colors={[colors.primary, colors.accent]} style={styles.primaryButtonFill}>
-              {loading ? (
-                <ActivityIndicator color={colors.background} />
-              ) : (
-                <Text style={styles.primaryButtonText}>
-                  {mode === 'signup' ? 'Crear cuenta' : 'Iniciar sesión'}
+            {signupSuccess ? (
+              <View style={styles.successCard}>
+                <Ionicons name="mail-open" size={20} color={colors.success} />
+                <Text style={styles.successTitle}>Revisa tu correo</Text>
+                <Text style={styles.successText}>
+                  Te enviamos un enlace de confirmación a {email}. Revisa tu bandeja de entrada y luego inicia sesión.
                 </Text>
-              )}
-            </LinearGradient>
-          </Pressable>
+              </View>
+            ) : (
+              <>
+                <TextField
+                  icon="mail"
+                  placeholder="Correo electrónico"
+                  value={email}
+                  onChangeText={setEmail}
+                  editable={!loading}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={{ marginBottom: spacing.md }}
+                />
 
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>o</Text>
-            <View style={styles.dividerLine} />
-          </View>
+                <TextField
+                  icon="lock-closed"
+                  placeholder="Contraseña"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  editable={!loading}
+                  rightAction={
+                    <Pressable onPress={() => setShowPassword((p) => !p)} hitSlop={8}>
+                      <Ionicons
+                        name={showPassword ? 'eye-off' : 'eye'}
+                        size={18}
+                        color={colors.textMuted}
+                      />
+                    </Pressable>
+                  }
+                />
 
-          <Animated.View style={{ transform: [{ scale: googleScale.scale }] }}>
-            <Pressable style={styles.googleButton} onPress={handleGoogleSignIn} onPressIn={googleScale.onPressIn} onPressOut={googleScale.onPressOut} disabled={status === 'loading'}>
-              {status === 'loading' ? (
-                <ActivityIndicator color={colors.textPrimary} />
-              ) : (
-                <>
-                  <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-                  <Text style={styles.googleButtonText}>Continuar con Google</Text>
-                </>
-              )}
-            </Pressable>
+                {!!displayError && (
+                  <View style={styles.errorCard}>
+                    <Ionicons name="alert-circle" size={14} color={colors.danger} />
+                    <Text style={styles.errorText}>{displayError}</Text>
+                  </View>
+                )}
+
+                <Button
+                  title={mode === 'signup' ? 'Crear cuenta' : 'Iniciar sesión'}
+                  onPress={handleEmailAuth}
+                  loading={loading}
+                  disabled={loading}
+                  style={{ marginTop: spacing.md }}
+                  size="lg"
+                />
+              </>
+            )}
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>o</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Animated.View style={{ transform: [{ scale: googleScale.scale }] }}>
+              <Button
+                title="Continuar con Google"
+                icon="logo-google"
+                variant="secondary"
+                onPress={handleGoogleSignIn}
+                loading={status === 'loading'}
+                disabled={status === 'loading'}
+                size="md"
+              />
+            </Animated.View>
           </Animated.View>
-        </Animated.View>
-
-        <Text style={styles.disclaimer}>
-          Sin acceso anónimo. Inicia sesión para ver los precios.
-        </Text>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };
-
-type FeatureProps = {
-  icon: keyof typeof Ionicons.glyphMap;
-  text: string;
-};
-
-const Feature = ({ icon, text }: FeatureProps) => (
-  <View style={styles.feature}>
-    <View style={styles.featureIcon}>
-      <Ionicons name={icon} size={16} color={colors.primary} />
-    </View>
-    <Text style={styles.featureText}>{text}</Text>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: {
@@ -261,7 +249,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xxl,
   },
   brandRow: {
     flexDirection: 'row',
@@ -285,27 +272,6 @@ const styles = StyleSheet.create({
   tagline: {
     color: colors.textSecondary,
     marginTop: spacing.sm,
-    fontSize: 15,
-  },
-  featureList: {
-    marginTop: spacing.xl,
-    gap: spacing.md,
-  },
-  feature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  featureIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(76, 201, 240, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureText: {
-    color: colors.textPrimary,
     fontSize: 15,
   },
   authCard: {
@@ -344,38 +310,22 @@ const styles = StyleSheet.create({
   modeTabTextActive: {
     color: colors.background,
   },
-  inputRow: {
-    flexDirection: 'row',
+  successCard: {
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(12, 18, 34, 0.85)',
-    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
   },
-  input: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: 14,
-  },
-  primaryButton: {
-    marginTop: spacing.sm,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  primaryButtonFill: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: radius.lg,
-  },
-  primaryButtonText: {
-    color: colors.background,
+  successTitle: {
+    color: colors.success,
+    fontSize: 17,
     fontWeight: '700',
-    fontSize: 15,
-    letterSpacing: 0.3,
+  },
+  successText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   dividerRow: {
     marginTop: spacing.lg,
@@ -395,21 +345,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.1,
   },
-  googleButton: {
-    backgroundColor: 'rgba(18, 26, 46, 0.8)',
-    borderRadius: radius.lg,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  googleButtonText: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
   errorCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -418,7 +353,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
+    marginTop: spacing.md,
     borderWidth: 1,
     borderColor: 'rgba(255, 92, 92, 0.25)',
   },
@@ -426,12 +361,5 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 12,
     flex: 1,
-  },
-  disclaimer: {
-    color: colors.textSecondary,
-    marginTop: spacing.xl,
-    textAlign: 'center',
-    fontSize: 12,
-    lineHeight: 18,
   },
 });

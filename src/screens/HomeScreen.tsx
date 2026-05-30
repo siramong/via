@@ -9,6 +9,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FuelCard } from '../components/FuelCard';
 import { MapBackground } from '../components/MapView';
+import { OnboardingModal } from '../components/OnboardingModal';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
@@ -16,15 +17,27 @@ import { getBestStation } from '../services/pricing';
 import { colors, spacing } from '../theme';
 import type { StationMarker } from '../types';
 
+const needsOnboarding = (profile: { display_name: string | null; preferred_fuel: string | null } | null) => {
+  if (!profile) return false;
+  return !profile.preferred_fuel;
+};
+
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
   const { coords, refresh, status: locationStatus } = useLocationStore();
   const { profile } = useUserStore();
   const [bestStationResult, setBestStationResult] = useState<any>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const mapOffsetY = insets.top + spacing.xl + 40 + spacing.md + 260;
   const [refreshing, setRefreshing] = useState(false);
   const preferredFuel = profile?.preferred_fuel;
   const prevFuelRef = useRef(preferredFuel);
+
+  useEffect(() => {
+    if (profile && needsOnboarding(profile)) {
+      setShowOnboarding(true);
+    }
+  }, [profile]);
 
   const bestStationMarkers = useMemo(() => {
     if (!bestStationResult) return [];
@@ -92,12 +105,19 @@ export const HomeScreen = () => {
           />
         }
       >
-        <Text style={styles.title}>Mejor cerca</Text>
-        {preferredFuel && (
-          <Text style={styles.filterHint}>
-            Mostrando {FUEL_DISPLAY[preferredFuel]}
-          </Text>
-        )}
+        <View style={styles.welcomeRow}>
+          <View>
+            <Text style={styles.greeting}>
+              {profile?.display_name ? `Hola, ${profile.display_name.split(' ')[0]}` : 'Hola'}
+            </Text>
+            <Text style={styles.title}>Mejor cerca</Text>
+          </View>
+          {preferredFuel && (
+            <View style={styles.fuelBadge}>
+              <Text style={styles.fuelBadgeText}>{FUEL_DISPLAY[preferredFuel]}</Text>
+            </View>
+          )}
+        </View>
         {bestStationResult && (
           <View style={styles.featuredCard}>
             <FuelCard result={bestStationResult} />
@@ -107,6 +127,11 @@ export const HomeScreen = () => {
       {!coords && (
         <Text style={styles.hint}>Activa la ubicación para encontrar los mejores precios</Text>
       )}
+
+      <OnboardingModal
+        visible={showOnboarding}
+        onComplete={() => setShowOnboarding(false)}
+      />
     </View>
   );
 };
@@ -120,16 +145,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
   },
+  welcomeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+  },
+  greeting: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '500',
+  },
   title: {
     color: colors.textPrimary,
     fontSize: 28,
     fontWeight: '800',
   },
-  filterHint: {
+  fuelBadge: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginBottom: 4,
+  },
+  fuelBadgeText: {
     color: colors.primary,
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: spacing.xs,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   featuredCard: {
     marginTop: spacing.md,

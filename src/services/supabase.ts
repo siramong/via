@@ -25,46 +25,49 @@ export const isSupabaseConfigured = () => {
 
 export const ensureUserProfile = async (session: Session): Promise<UserProfile> => {
   if (!isSupabaseConfigured()) {
-      return {
-        id: session.user.id,
-        auth_id: session.user.id,
-        display_name: session.user.user_metadata?.full_name ?? 'Test User',
-        reputation: 0,
-        access_remaining: 3,
-        preferred_fuel: null,
-        created_at: session.user.created_at,
-      };
-    }
+    return {
+      id: session.user.id,
+      auth_id: session.user.id,
+      display_name: session.user.user_metadata?.full_name ?? 'Test User',
+      reputation: 0,
+      access_remaining: 3,
+      preferred_fuel: null,
+      created_at: session.user.created_at,
+    };
+  }
 
-    const authId = session.user.id;
-  const { data: existing, error: existingError } = await supabase
+  const authId = session.user.id;
+  const displayName = session.user.user_metadata?.full_name ?? session.user.email ?? 'VIA User';
+
+  const { data: existing } = await supabase
     .from('users')
     .select('*')
     .eq('auth_id', authId)
     .maybeSingle();
 
-  if (existingError && existingError.code !== 'PGRST116') {
-    throw existingError;
-  }
-
-  if (existing) {
-    return existing as UserProfile;
-  }
+  if (existing) return existing as UserProfile;
 
   const { data: inserted, error: insertError } = await supabase
     .from('users')
     .insert({
       auth_id: authId,
-      display_name: session.user.user_metadata?.full_name ?? session.user.email ?? 'VIA User',
+      display_name: displayName,
       reputation: 0,
       access_remaining: 3,
     })
     .select('*')
     .single();
 
-  if (insertError || !inserted) {
-    throw insertError;
+  if (insertError?.code === '23505') {
+    const { data: retry } = await supabase
+      .from('users')
+      .select('*')
+      .eq('auth_id', authId)
+      .single();
+    if (retry) return retry as UserProfile;
   }
+
+  if (insertError || !inserted) throw insertError ?? new Error('Failed to create profile');
 
   return inserted as UserProfile;
 };

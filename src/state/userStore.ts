@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as WebBrowser from 'expo-web-browser';
+import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import type { Session } from '@supabase/supabase-js';
 import type { FuelType, UserProfile } from '../types';
 import { ensureUserProfile, refreshUserProfile, supabase, isSupabaseConfigured } from '../services/supabase';
@@ -19,13 +20,6 @@ type UserState = {
   grantAccess: (delta: number, reason: string) => Promise<void>;
   updateDisplayName: (name: string) => Promise<void>;
   updatePreferredFuel: (fuelType: FuelType | null) => Promise<void>;
-};
-
-const buildRedirectUrl = () => {
-  // For mobile: use custom scheme (works in native builds)
-  // For Expo Go: WebBrowser will handle the session persistence via localStorage
-  const scheme = 'via';
-  return `${scheme}://auth`;
 };
 
 // Mock session for testing without Supabase
@@ -121,8 +115,8 @@ export const useUserStore = create<UserState>((set, get) => ({
     }
 
     set({ status: 'loading', error: null });
-    const redirectTo = buildRedirectUrl();
-    
+    const redirectTo = 'via://auth';
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -135,27 +129,20 @@ export const useUserStore = create<UserState>((set, get) => ({
     });
 
     if (error || !data?.url) {
-      const errorMsg = error?.message ?? 'Unable to start Google sign-in.';
+      const errorMsg = error?.message ?? 'No se pudo iniciar sesión con Google.';
       set({ status: 'error', error: errorMsg });
       return;
     }
-    
+
     try {
-      // In Expo Go, deep links don't work, so we can't get the URL back from WebBrowser
-      // Instead, we rely on onAuthStateChange to detect the session after auth completes
-      await WebBrowser.openBrowserAsync(data.url);
-      
-      // After browser closes, wait for onAuthStateChange to pick up the session
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if session was established
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
-        set({ session: sessionData.session, status: 'ready' });
-        const profile = await ensureUserProfile(sessionData.session);
-        set({ profile });
-      } else {
-        set({ status: 'error', error: 'No session found. Try again.' });
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+      if (result.type === 'success') {
+        const { url } = result;
+        const params = QueryParams.getQueryParams(url);
+        if (params.params?.code) {
+          await supabase.auth.exchangeCodeForSession(params.params.code);
+        }
       }
     } catch (err) {
       const errorMsg = (err as Error).message;

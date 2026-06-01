@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import * as WebBrowser from 'expo-web-browser';
 import type { Session } from '@supabase/supabase-js';
 import type { FuelType, UserProfile } from '../types';
 import { ensureUserProfile, refreshUserProfile, supabase } from '../services/supabase';
@@ -12,7 +13,7 @@ type UserState = {
   status: 'idle' | 'loading' | 'ready' | 'error';
   error: string | null | undefined;
   bootstrap: () => Promise<() => void>;
-  getGoogleOAuthUrl: () => string;
+  signInWithGoogle: () => Promise<void>;
   setSessionFromTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   signOut: () => Promise<void>;
   setSession: (session: Session | null) => void;
@@ -30,7 +31,57 @@ export const useUserStore = create<UserState>((set, get) => ({
   error: null,
   setSession: (session) => set({ session }),
 
-  getGoogleOAuthUrl: () => `${WEB_BASE_URL}/auth/google`,
+  signInWithGoogle: async () => {
+    set({ status: 'loading', error: null });
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${WEB_BASE_URL}/auth/callback`,
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (error) {
+      set({ status: 'error', error: error.message });
+      return;
+    }
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, `${WEB_BASE_URL}/auth/callback`);
+
+    if (result.type === 'success') {
+      const fragment = result.url.split('#')[1];
+      if (!fragment) {
+        set({ status: 'error', error: 'Respuesta de OAuth inválida' });
+        return;
+      }
+      const params = new URLSearchParams(fragment);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (sessionError) {
+          set({ status: 'error', error: sessionError.message });
+          return;
+        }
+        if (sessionData.session) {
+          set({ session: sessionData.session, status: 'ready' });
+          const profile = await ensureUserProfile(sessionData.session);
+          set({ profile });
+        }
+      } else {
+        set({ status: 'error', error: 'No se pudieron obtener los tokens de autenticación' });
+      }
+    } else if (result.type === 'cancel') {
+      set({ status: 'idle' });
+    } else {
+      set({ status: 'error', error: 'Autenticación cancelada' });
+    }
+  },
 
   setSessionFromTokens: async (accessToken, refreshToken) => {
     set({ status: 'loading', error: null });

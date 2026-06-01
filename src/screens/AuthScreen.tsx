@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -10,7 +9,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,7 +22,7 @@ import { colors, radius, spacing } from '../theme';
 
 export const AuthScreen = () => {
   const insets = useSafeAreaInsets();
-  const { getGoogleOAuthUrl, setSessionFromTokens, status, error } = useUserStore();
+  const { signInWithGoogle, status, error } = useUserStore();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,7 +31,6 @@ export const AuthScreen = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [tabsWidth, setTabsWidth] = useState(0);
-  const [webViewVisible, setWebViewVisible] = useState(false);
 
   const logoOpacity = useSharedValue(0);
   const logoTranslateY = useSharedValue(20);
@@ -104,18 +101,8 @@ export const AuthScreen = () => {
   }, []);
 
   const handleGoogleSignIn = useCallback(() => {
-    setWebViewVisible(true);
-  }, []);
-
-  const handleWebViewMessage = useCallback(async (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'VIA_AUTH_SUCCESS') {
-        setWebViewVisible(false);
-        await setSessionFromTokens(data.access_token, data.refresh_token);
-      }
-    } catch {}
-  }, [setSessionFromTokens]);
+    signInWithGoogle();
+  }, [signInWithGoogle]);
 
   const handleEmailAuth = useCallback(async () => {
     if (!email || !password) {
@@ -287,29 +274,6 @@ export const AuthScreen = () => {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <Modal visible={webViewVisible} animationType="slide" presentationStyle="pageSheet">
-        <View style={{ flex: 1, backgroundColor: '#060C28' }}>
-          <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16, paddingBottom: 8, alignItems: 'flex-end' }}>
-            <Pressable onPress={() => setWebViewVisible(false)} hitSlop={12}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
-            </Pressable>
-          </View>
-          <WebView
-            source={{ uri: getGoogleOAuthUrl() }}
-            style={{ flex: 1 }}
-            onMessage={handleWebViewMessage}
-            javaScriptEnabled
-            domStorageEnabled
-            startInLoadingState
-            renderLoading={() => (
-              <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: colors.textSecondary }}>Cargando...</Text>
-              </View>
-            )}
-          />
-        </View>
-      </Modal>
     </View>
   );
 };

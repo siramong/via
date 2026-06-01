@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import * as WebBrowser from 'expo-web-browser';
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import type { Session } from '@supabase/supabase-js';
 import type { FuelType, UserProfile } from '../types';
-import { ensureUserProfile, refreshUserProfile, supabase, isSupabaseConfigured } from '../services/supabase';
+import { ensureUserProfile, refreshUserProfile, supabase } from '../services/supabase';
 import { consumeAccess as consumeAccessRpc, grantAccess as grantAccessRpc } from '../services/pricing';
+
+const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://via.siramong.tech';
 
 type UserState = {
   session: Session | null;
@@ -12,7 +12,8 @@ type UserState = {
   status: 'idle' | 'loading' | 'ready' | 'error';
   error: string | null | undefined;
   bootstrap: () => Promise<() => void>;
-  signInWithGoogle: () => Promise<void>;
+  getGoogleOAuthUrl: () => string;
+  setSessionFromTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   signOut: () => Promise<void>;
   setSession: (session: Session | null) => void;
   refreshProfile: () => Promise<void>;
@@ -22,59 +23,36 @@ type UserState = {
   updatePreferredFuel: (fuelType: FuelType | null) => Promise<void>;
 };
 
-// Mock session for testing without Supabase
-const mockSession: Session = {
-  user: {
-    id: 'test-user-id',
-    aud: 'authenticated',
-    role: 'authenticated',
-    email: 'test@via.local',
-    email_confirmed_at: new Date().toISOString(),
-    phone: undefined,
-    confirmed_at: new Date().toISOString(),
-    last_sign_in_at: new Date().toISOString(),
-    app_metadata: {},
-    user_metadata: {
-      full_name: 'Test User',
-    },
-    identities: [],
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  access_token: 'mock-token',
-  token_type: 'bearer',
-  expires_in: 3600,
-  refresh_token: 'mock-refresh',
-  expires_at: Date.now() + 3600000,
-};
-
-const mockProfile: UserProfile = {
-  id: 'test-user-id',
-  auth_id: 'test-user-id',
-  display_name: 'Test User',
-  reputation: 42,
-  access_remaining: 3,
-  preferred_fuel: null,
-  created_at: new Date().toISOString(),
-};
-
 export const useUserStore = create<UserState>((set, get) => ({
   session: null,
   profile: null,
   status: 'idle',
   error: null,
   setSession: (session) => set({ session }),
+
+  getGoogleOAuthUrl: () => `${WEB_BASE_URL}/auth/google`,
+
+  setSessionFromTokens: async (accessToken, refreshToken) => {
+    set({ status: 'loading', error: null });
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (error) {
+      set({ status: 'error', error: error.message });
+      return;
+    }
+    if (data.session) {
+      set({ session: data.session, status: 'ready' });
+      const profile = await ensureUserProfile(data.session);
+      set({ profile });
+    }
+  },
+
   bootstrap: async () => {
     set({ status: 'loading', error: null });
 
     try {
-      if (!isSupabaseConfigured()) {
-        // Use mock session for development without Supabase
-        set({ session: mockSession, profile: mockProfile, status: 'ready' });
-        return () => {};
-      }
-
-      // First, try to get existing session
       const { data, error } = await supabase.auth.getSession();
       if (error) {
         set({ status: 'error', error: error.message });
@@ -88,7 +66,6 @@ export const useUserStore = create<UserState>((set, get) => ({
         }
       }
 
-      // Set up listener for auth state changes
       const { data: authData } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
         set({ session: nextSession });
         if (nextSession) {
@@ -108,109 +85,52 @@ export const useUserStore = create<UserState>((set, get) => ({
       return () => {};
     }
   },
-  signInWithGoogle: async () => {
-    if (!isSupabaseConfigured()) {
-      set({ session: mockSession, profile: mockProfile, status: 'ready' });
-      return;
-    }
 
-    set({ status: 'loading', error: null });
-    const redirectTo = 'via://auth';
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
-    });
-
-    if (error || !data?.url) {
-      const errorMsg = error?.message ?? 'No se pudo iniciar sesión con Google.';
-      set({ status: 'error', error: errorMsg });
-      return;
-    }
-
-    try {
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-
-      if (result.type === 'success') {
-        const { url } = result;
-        const params = QueryParams.getQueryParams(url);
-        if (params.params?.code) {
-          await supabase.auth.exchangeCodeForSession(params.params.code);
-        }
-      }
-    } catch (err) {
-      const errorMsg = (err as Error).message;
-      set({ status: 'error', error: errorMsg });
-    }
-  },
   signOut: async () => {
-    if (isSupabaseConfigured()) {
-      await supabase.auth.signOut();
-    }
+    await supabase.auth.signOut();
     set({ session: null, profile: null });
   },
+
   refreshProfile: async () => {
     const session = get().session;
     if (!session) return;
-    if (isSupabaseConfigured()) {
-      const profile = await refreshUserProfile(session.user.id);
-      set({ profile });
-    }
+    const profile = await refreshUserProfile(session.user.id);
+    set({ profile });
   },
+
   consumeAccess: async () => {
     const session = get().session;
     if (!session) return;
-    if (isSupabaseConfigured()) {
-      const remaining = await consumeAccessRpc(session.user.id);
-      const profile = get().profile;
-      if (profile) {
-        set({ profile: { ...profile, access_remaining: remaining } });
-      }
-    } else {
-      const profile = get().profile;
-      if (profile && profile.access_remaining > 0) {
-        set({ profile: { ...profile, access_remaining: profile.access_remaining - 1 } });
-      }
+    const remaining = await consumeAccessRpc(session.user.id);
+    const profile = get().profile;
+    if (profile) {
+      set({ profile: { ...profile, access_remaining: remaining } });
     }
   },
+
   grantAccess: async (delta: number, reason: string) => {
     const session = get().session;
     if (!session) return;
-    if (isSupabaseConfigured()) {
-      const remaining = await grantAccessRpc(session.user.id, delta, reason);
-      const profile = get().profile;
-      if (profile) {
-        set({ profile: { ...profile, access_remaining: remaining } });
-      }
-    } else {
-      const profile = get().profile;
-      if (profile) {
-        set({ profile: { ...profile, access_remaining: profile.access_remaining + delta } });
-      }
+    const remaining = await grantAccessRpc(session.user.id, delta, reason);
+    const profile = get().profile;
+    if (profile) {
+      set({ profile: { ...profile, access_remaining: remaining } });
     }
   },
+
   updateDisplayName: async (name: string) => {
     const { profile, session } = get();
     if (!profile || !session) return;
-    if (isSupabaseConfigured()) {
-      const { updateProfileName } = await import('../services/supabase');
-      await updateProfileName(profile.id, name);
-    }
+    const { updateProfileName } = await import('../services/supabase');
+    await updateProfileName(profile.id, name);
     set({ profile: { ...profile, display_name: name } });
   },
+
   updatePreferredFuel: async (fuelType: FuelType | null) => {
     const { profile, session } = get();
     if (!profile || !session) return;
-    if (isSupabaseConfigured()) {
-      const { updatePreferredFuel } = await import('../services/supabase');
-      await updatePreferredFuel(profile.id, fuelType);
-    }
+    const { updatePreferredFuel } = await import('../services/supabase');
+    await updatePreferredFuel(profile.id, fuelType);
     set({ profile: { ...profile, preferred_fuel: fuelType } });
   },
 }));

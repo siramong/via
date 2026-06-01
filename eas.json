@@ -17,6 +17,10 @@
         "buildType": "apk"
       }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_WEB_URL": "https://via.siramong.tech"
+      }
+    }
   }
 }

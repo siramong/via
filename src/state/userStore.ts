@@ -47,40 +47,35 @@ export const useUserStore = create<UserState>((set, get) => ({
       return;
     }
 
-    const result = await WebBrowser.openAuthSessionAsync(data.url, `${WEB_BASE_URL}/auth/callback`);
+    const result = await WebBrowser.openAuthSessionAsync(data.url, 'via://auth/callback');
 
-    if (result.type === 'success') {
-      const fragment = result.url.split('#')[1];
-      if (!fragment) {
-        set({ status: 'error', error: 'Respuesta de OAuth inválida' });
+    if (result.type !== 'success') {
+      set({ status: 'cancel' === result.type ? 'idle' : 'error', error: 'Autenticación cancelada' });
+      return;
+    }
+
+    const url = new URL(result.url);
+    const accessToken = url.searchParams.get('access_token');
+    const refreshToken = url.searchParams.get('refresh_token');
+
+    if (accessToken && refreshToken) {
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (sessionError) {
+        set({ status: 'error', error: sessionError.message });
         return;
       }
-      const params = new URLSearchParams(fragment);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-
-      if (accessToken && refreshToken) {
-        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        if (sessionError) {
-          set({ status: 'error', error: sessionError.message });
-          return;
-        }
-        if (sessionData.session) {
-          set({ session: sessionData.session, status: 'ready' });
-          const profile = await ensureUserProfile(sessionData.session);
-          set({ profile });
-        }
-      } else {
-        set({ status: 'error', error: 'No se pudieron obtener los tokens de autenticación' });
+      if (sessionData.session) {
+        set({ session: sessionData.session, status: 'ready' });
+        const profile = await ensureUserProfile(sessionData.session);
+        set({ profile });
       }
-    } else if (result.type === 'cancel') {
-      set({ status: 'idle' });
-    } else {
-      set({ status: 'error', error: 'Autenticación cancelada' });
+      return;
     }
+
+    set({ status: 'error', error: 'No se pudo completar la autenticación. Asegúrate de usar Chrome o Safari como navegador predeterminado.' });
   },
 
   setSessionFromTokens: async (accessToken, refreshToken) => {

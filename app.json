@@ -2,6 +2,7 @@
   "expo": {
     "name": "VIA",
     "slug": "via",
+    "scheme": "via",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -32,8 +33,7 @@
           "photosPermission": "Permite a VIA acceder a tus fotos.",
           "cameraPermission": "Permite a VIA acceder a tu cámara para capturar displays de surtidores."
         }
-      ],
-      "expo-web-browser"
+      ]
     ],
     "ios": {
       "supportsTablet": true,

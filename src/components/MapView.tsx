@@ -29,18 +29,18 @@ const LEAFLET_HTML = `
     html, body { width: 100%; height: 100%; overflow: hidden; }
     #map { width: 100%; height: 100%; }
     @keyframes pulse-dot {
-      0% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.4); opacity: 0.4; }
-      100% { transform: scale(1); opacity: 0.8; }
+      0% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.8); opacity: 0.2; }
+      100% { transform: scale(1); opacity: 0.7; }
     }
     .user-loc-wrap {
-      width: 32px; height: 32px;
+      width: 64px; height: 64px;
       position: relative;
     }
     .user-loc-pulse {
-      width: 32px; height: 32px;
+      width: 64px; height: 64px;
       border-radius: 50%;
-      background: rgba(76, 201, 240, 0.25);
+      background: rgba(76, 201, 240, 0.2);
       position: absolute;
       top: 0; left: 0;
       animation: pulse-dot 2s infinite;
@@ -51,7 +51,7 @@ const LEAFLET_HTML = `
       background: #4A7AF8;
       border: 2px solid #011360;
       position: absolute;
-      top: 9px; left: 9px;
+      top: 25px; left: 25px;
     }
   </style>
 </head>
@@ -69,7 +69,7 @@ const LEAFLET_HTML = `
     function setUserLocation(lat, lng) {
       if (userMarker) { map.removeLayer(userMarker); }
       var html = '<div class="user-loc-wrap"><div class="user-loc-pulse"></div><div class="user-loc-dot"></div></div>';
-      var icon = L.divIcon({ className: '', html: html, iconSize: [32, 32], iconAnchor: [16, 16] });
+      var icon = L.divIcon({ className: '', html: html, iconSize: [64, 64], iconAnchor: [32, 32] });
       userMarker = L.marker([lat, lng], { icon: icon, zIndexOffset: 1000 }).addTo(map);
     }
 

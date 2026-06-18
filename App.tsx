@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -11,28 +11,24 @@ import { MapScreen } from './src/screens/MapScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { useUserStore } from './src/state/userStore';
-import { colors } from './src/theme';
+import { colors, shadows } from './src/theme';
 import { ToastContainer } from './src/components/ui/Toast';
 
 const Tab = createBottomTabNavigator();
 
-const iconForRoute = (name: string, focused: boolean) => {
-  switch (name) {
-    case 'Home':
-      return focused ? 'pricetag' : 'pricetag-outline';
-    case 'Contribute':
-      return focused ? 'camera' : 'camera-outline';
-    case 'Map':
-      return focused ? 'map' : 'map-outline';
-    case 'Profile':
-      return focused ? 'person' : 'person-outline';
-    default:
-      return focused ? 'ellipse' : 'ellipse-outline';
-  }
+const TAB_CONFIG: Record<string, { focused: keyof typeof Ionicons.glyphMap; unfocused: keyof typeof Ionicons.glyphMap }> = {
+  Home: { focused: 'pricetag', unfocused: 'pricetag-outline' },
+  Map: { focused: 'map', unfocused: 'map-outline' },
+  Profile: { focused: 'person', unfocused: 'person-outline' },
 };
 
 const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
   const insets = useSafeAreaInsets();
+  const visibleRoutes = state.routes.filter((r) => r.name !== 'Contribute');
+
+  const handleFabPress = useCallback(() => {
+    navigation.navigate('Contribute');
+  }, [navigation]);
 
   return (
     <View
@@ -54,9 +50,9 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
         elevation: 16,
       }}
     >
-      {state.routes.map((route, index) => {
+      {visibleRoutes.map((route, index) => {
         const { options } = descriptors[route.key];
-        const isFocused = state.index === index;
+        const isFocused = state.index === state.routes.indexOf(route);
 
         const onPress = () => {
           const event = navigation.emit({
@@ -69,7 +65,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
           }
         };
 
-        const iconName = iconForRoute(route.name, isFocused);
+        const cfg = TAB_CONFIG[route.name];
 
         return (
           <Pressable
@@ -95,15 +91,47 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
                   : undefined
               }
             >
-              <Ionicons
-                name={iconName}
-                size={22}
-                color={isFocused ? colors.primary : colors.textSecondary}
-              />
+              {cfg && (
+                <Ionicons
+                  name={isFocused ? cfg.focused : cfg.unfocused}
+                  size={22}
+                  color={isFocused ? colors.primary : colors.textSecondary}
+                />
+              )}
             </View>
           </Pressable>
         );
       })}
+
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: -16,
+          alignItems: 'center',
+          pointerEvents: 'box-none',
+        }}
+      >
+        <Pressable
+          onPress={handleFabPress}
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            backgroundColor: colors.primary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: colors.primary,
+            shadowOpacity: 0.5,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 12,
+          }}
+        >
+          <Ionicons name="camera" size={22} color={colors.background} />
+        </Pressable>
+      </View>
     </View>
   );
 };

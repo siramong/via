@@ -11,6 +11,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from '
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { runOcrWithRetries, type OcrOutput } from '../services/ocr';
+import { CropTool } from '../components/CropTool';
 import { PriceSelector } from '../components/PriceSelector';
 import { PhotoPreview } from '../components/PhotoPreview';
 import { StationSelector } from '../components/StationSelector';
@@ -34,7 +35,7 @@ export const ContributeScreen = () => {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [prices, setPrices] = useState<FuelPriceInput>({});
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'camera' | 'review' | 'confirm'>('camera');
+  const [step, setStep] = useState<'camera' | 'crop' | 'review' | 'confirm'>('camera');
   const [error, setError] = useState<string | null>(null);
   const [selectedStation, setSelectedStation] = useState<StationMarker | null>(null);
   const [showStationPicker, setShowStationPicker] = useState(false);
@@ -126,9 +127,7 @@ export const ContributeScreen = () => {
       setOcrRawText('');
       setOcrError('');
       setOcrDone(false);
-      setStep('review');
-
-      await runOcr(uri);
+      setStep('crop');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown camera error';
       console.error('[Camera]', msg);
@@ -223,6 +222,12 @@ export const ContributeScreen = () => {
     }
   }, [imageUri, session, profile, prices, selectedStation, grantAccess, coords, ocrRawText, ocrConfidence]);
 
+  const handleCrop = useCallback((croppedUri: string) => {
+    setImageUri(croppedUri);
+    setStep('review');
+    runOcr(croppedUri);
+  }, [runOcr]);
+
   const resetAll = useCallback(() => {
     setStep('camera');
     setImageUri(null);
@@ -243,166 +248,171 @@ export const ContributeScreen = () => {
   return (
     <View style={styles.container}>
       <MapBackground />
-      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }]}>
-        <View style={styles.header}>
-          <View style={styles.headerIcon}>
-            <Ionicons name="camera" size={18} color={colors.textPrimary} />
-          </View>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>Contribuir</Text>
-            <Text style={styles.subtitle}>Comparte precios frescos y gana acceso.</Text>
-          </View>
-        </View>
 
-        {step === 'camera' && (
-          <Animated.View style={stepStyle}>
-            <Card variant="glass">
-              <View style={styles.sectionHeader}>
-                <Ionicons name="camera" size={18} color={colors.primary} />
-                <Text style={styles.sectionTitle}>Captura el display del surtidor</Text>
-              </View>
-              <Text style={styles.bodyText}>
-                Una foto clara mejora la precisión del OCR y acelera la revisión.
-              </Text>
-              {!!error && <Text style={styles.error}>{error}</Text>}
-              <Button
-                title="Abrir cámara"
-                icon="camera"
-                variant="primary"
-                loading={loading}
-                onPress={pickImage}
-                size="lg"
-                style={{ marginTop: spacing.lg }}
-              />
-            </Card>
-          </Animated.View>
-        )}
-
-        {step === 'review' && imageUri && (
-          <Animated.View style={stepStyle}>
-            <PhotoPreview uri={imageUri} onRetake={resetAll} />
-
-            <Card variant="glass" style={{ marginTop: spacing.md }}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="pricetags" size={18} color={colors.primary} />
-                <Text style={styles.sectionTitle}>Precios</Text>
-              </View>
-              <Text style={styles.bodyText}>
-                  {ocrDone ? 'Ajusta cualquier valor incorrecto abajo.' : 'Ejecutando OCR...'}
-              </Text>
-              {loading && !ocrDone ? (
-                <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
-              ) : (
-                <View style={styles.prices}>
-                  {allFuelTypes.map((fuelType) => (
-                    <PriceSelector
-                      key={fuelType}
-                      label={FUEL_DISPLAY[fuelType]}
-                      value={prices[fuelType] ?? 0}
-                      onChange={(v) => updatePrice(fuelType, v)}
-                    />
-                  ))}
-                </View>
-              )}
-            </Card>
-
-            <Card variant="glass" style={{ marginTop: spacing.md }}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="location" size={18} color={colors.primary} />
-                <Text style={styles.sectionTitle}>Estación</Text>
-              </View>
-              <Text style={styles.bodyText}>
-                Selecciona a qué estación pertenece este precio.
-              </Text>
-              <Button
-                title={selectedStation?.name ?? 'Elegir estación...'}
-                icon={selectedStation ? 'checkmark-circle' : 'ellipse-outline'}
-                variant="secondary"
-                size="sm"
-                onPress={() => setShowStationPicker(true)}
-                style={{ marginTop: spacing.md }}
-              />
-            </Card>
-
-            {!!error && <Text style={styles.error}>{error}</Text>}
-
-            <View style={styles.actions}>
-              <Button title="Atrás" variant="secondary" icon="arrow-back" onPress={resetAll} size="md" style={{ flex: 1 }} />
-              <Button
-                title="Continuar"
-                variant="primary"
-                icon="arrow-forward"
-                disabled={!canContinue}
-                onPress={() => setStep('confirm')}
-                size="md"
-                style={{ flex: 1 }}
-              />
+      {step === 'crop' && imageUri ? (
+        <CropTool uri={imageUri} onCrop={handleCrop} onCancel={resetAll} />
+      ) : (
+        <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }]}>
+          <View style={styles.header}>
+            <View style={styles.headerIcon}>
+              <Ionicons name="camera" size={18} color={colors.textPrimary} />
             </View>
-          </Animated.View>
-        )}
+            <View style={styles.headerText}>
+              <Text style={styles.title}>Contribuir</Text>
+              <Text style={styles.subtitle}>Comparte precios frescos y gana acceso.</Text>
+            </View>
+          </View>
 
-        {step === 'confirm' && imageUri && (
-          <Animated.View style={stepStyle}>
-            <Card variant="glass">
-              <View style={styles.sectionHeader}>
-                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                <Text style={styles.sectionTitle}>Confirmar reporte</Text>
-              </View>
-
-              <View style={styles.confirmPhoto}>
-                <Ionicons name="image" size={16} color={colors.textMuted} />
-                <Text style={styles.confirmPhotoText}>Foto capturada</Text>
-              </View>
-
-              <View style={styles.confirmRow}>
-                <Ionicons name="location" size={16} color={colors.textSecondary} />
-                <Text style={styles.confirmLabel}>Estación:</Text>
-                <Text style={styles.confirmValue} numberOfLines={1}>
-                  {selectedStation?.name ?? 'No seleccionada'}
-                </Text>
-              </View>
-
-              <View style={styles.confirmPrices}>
-                <Text style={styles.confirmPricesLabel}>Precios</Text>
-                <View style={styles.confirmPricesGrid}>
-                  {allFuelTypes.map((ft) => {
-                    const v = prices[ft];
-                    if (v == null || v === 0) return null;
-                    return (
-                      <View key={ft} style={styles.confirmPriceItem}>
-                        <Badge variant="info" label={FUEL_DISPLAY[ft]} />
-                        <Text style={styles.confirmPriceValue}>${v.toFixed(2)}</Text>
-                      </View>
-                    );
-                  })}
+          {step === 'camera' && (
+            <Animated.View style={stepStyle}>
+              <Card variant="glass">
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="camera" size={18} color={colors.primary} />
+                  <Text style={styles.sectionTitle}>Captura el display del surtidor</Text>
                 </View>
-              </View>
+                <Text style={styles.bodyText}>
+                  Una foto clara mejora la precisión del OCR y acelera la revisión.
+                </Text>
+                {!!error && <Text style={styles.error}>{error}</Text>}
+                <Button
+                  title="Abrir cámara"
+                  icon="camera"
+                  variant="primary"
+                  loading={loading}
+                  onPress={pickImage}
+                  size="lg"
+                  style={{ marginTop: spacing.lg }}
+                />
+              </Card>
+            </Animated.View>
+          )}
+
+          {step === 'review' && imageUri && (
+            <Animated.View style={stepStyle}>
+              <PhotoPreview uri={imageUri} onRetake={resetAll} />
+
+              <Card variant="glass" style={{ marginTop: spacing.md }}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="pricetags" size={18} color={colors.primary} />
+                  <Text style={styles.sectionTitle}>Precios</Text>
+                </View>
+                <Text style={styles.bodyText}>
+                    {ocrDone ? 'Ajusta cualquier valor incorrecto abajo.' : 'Ejecutando OCR...'}
+                </Text>
+                {loading && !ocrDone ? (
+                  <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
+                ) : (
+                  <View style={styles.prices}>
+                    {allFuelTypes.map((fuelType) => (
+                      <PriceSelector
+                        key={fuelType}
+                        label={FUEL_DISPLAY[fuelType]}
+                        value={prices[fuelType] ?? 0}
+                        onChange={(v) => updatePrice(fuelType, v)}
+                      />
+                    ))}
+                  </View>
+                )}
+              </Card>
+
+              <Card variant="glass" style={{ marginTop: spacing.md }}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="location" size={18} color={colors.primary} />
+                  <Text style={styles.sectionTitle}>Estación</Text>
+                </View>
+                <Text style={styles.bodyText}>
+                  Selecciona a qué estación pertenece este precio.
+                </Text>
+                <Button
+                  title={selectedStation?.name ?? 'Elegir estación...'}
+                  icon={selectedStation ? 'checkmark-circle' : 'ellipse-outline'}
+                  variant="secondary"
+                  size="sm"
+                  onPress={() => setShowStationPicker(true)}
+                  style={{ marginTop: spacing.md }}
+                />
+              </Card>
 
               {!!error && <Text style={styles.error}>{error}</Text>}
 
               <View style={styles.actions}>
+                <Button title="Atrás" variant="secondary" icon="arrow-back" onPress={resetAll} size="md" style={{ flex: 1 }} />
                 <Button
-                  title="Editar"
-                  variant="secondary"
-                  icon="arrow-back"
-                  onPress={() => setStep('review')}
-                  size="md"
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  title="Enviar"
+                  title="Continuar"
                   variant="primary"
-                  icon="cloud-upload"
-                  loading={loading}
-                  onPress={submitReport}
+                  icon="arrow-forward"
+                  disabled={!canContinue}
+                  onPress={() => setStep('confirm')}
                   size="md"
                   style={{ flex: 1 }}
                 />
               </View>
-            </Card>
-          </Animated.View>
-        )}
-      </ScrollView>
+            </Animated.View>
+          )}
+
+          {step === 'confirm' && imageUri && (
+            <Animated.View style={stepStyle}>
+              <Card variant="glass">
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                  <Text style={styles.sectionTitle}>Confirmar reporte</Text>
+                </View>
+
+                <View style={styles.confirmPhoto}>
+                  <Ionicons name="image" size={16} color={colors.textMuted} />
+                  <Text style={styles.confirmPhotoText}>Foto capturada</Text>
+                </View>
+
+                <View style={styles.confirmRow}>
+                  <Ionicons name="location" size={16} color={colors.textSecondary} />
+                  <Text style={styles.confirmLabel}>Estación:</Text>
+                  <Text style={styles.confirmValue} numberOfLines={1}>
+                    {selectedStation?.name ?? 'No seleccionada'}
+                  </Text>
+                </View>
+
+                <View style={styles.confirmPrices}>
+                  <Text style={styles.confirmPricesLabel}>Precios</Text>
+                  <View style={styles.confirmPricesGrid}>
+                    {allFuelTypes.map((ft) => {
+                      const v = prices[ft];
+                      if (v == null || v === 0) return null;
+                      return (
+                        <View key={ft} style={styles.confirmPriceItem}>
+                          <Badge variant="info" label={FUEL_DISPLAY[ft]} />
+                          <Text style={styles.confirmPriceValue}>${v.toFixed(2)}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {!!error && <Text style={styles.error}>{error}</Text>}
+
+                <View style={styles.actions}>
+                  <Button
+                    title="Editar"
+                    variant="secondary"
+                    icon="arrow-back"
+                    onPress={() => setStep('review')}
+                    size="md"
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    title="Enviar"
+                    variant="primary"
+                    icon="cloud-upload"
+                    loading={loading}
+                    onPress={submitReport}
+                    size="md"
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </Card>
+            </Animated.View>
+          )}
+        </ScrollView>
+      )}
 
       {showStationPicker && (
         <StationSelector

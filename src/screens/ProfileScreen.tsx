@@ -16,7 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../state/userStore';
 import { getUserReports } from '../services/supabase';
 import { AccessCounter } from '../components/AccessCounter';
-import { MapBackground } from '../components/MapView';
 import { Badge } from '../components/ui/Badge';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { useScalePress } from '../hooks/useScalePress';
@@ -163,7 +162,6 @@ export const ProfileScreen = () => {
   if (!profile) {
     return (
       <View style={styles.container}>
-        <MapBackground />
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} />
         </View>
@@ -173,7 +171,6 @@ export const ProfileScreen = () => {
 
   return (
     <View style={styles.container}>
-      <MapBackground />
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }]}>
         {/* Header with avatar */}
         <Animated.View style={headerStyle}>

@@ -6,6 +6,7 @@ import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { freshnessToLabel, freshnessVariant, freshnessIcon } from '../utils/freshness';
 import type { StationMarker } from '../types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -19,18 +20,6 @@ type Props = {
 const formatDistance = (meters: number) => {
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(1)} km`;
-};
-
-const freshnessVariant = (freshness?: string) => {
-  if (freshness === 'fresh') return 'success' as const;
-  if (freshness === 'recent') return 'warning' as const;
-  return 'neutral' as const;
-};
-
-const freshnessIcon = (freshness?: string) => {
-  if (freshness === 'fresh') return 'flash';
-  if (freshness === 'recent') return 'time';
-  return 'alert-circle';
 };
 
 export const StationDetailSheet = ({ station, onClose }: Props) => {
@@ -103,7 +92,7 @@ export const StationDetailSheet = ({ station, onClose }: Props) => {
           {station.freshness && (
             <Badge
               variant={freshnessVariant(station.freshness)}
-              label={station.freshness}
+              label={freshnessToLabel(station.freshness)}
               icon={freshnessIcon(station.freshness)}
             />
           )}

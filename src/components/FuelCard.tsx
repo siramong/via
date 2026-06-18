@@ -6,7 +6,8 @@ import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
-import type { Freshness, StationResult } from '../types';
+import { freshnessToLabel, freshnessVariant, freshnessIcon } from '../utils/freshness';
+import type { StationResult } from '../types';
 
 type Props = {
   result: StationResult | null;
@@ -15,12 +16,6 @@ type Props = {
 const formatDistance = (meters: number) => {
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(1)} km`;
-};
-
-const freshnessBadge = (freshness: Freshness) => {
-  if (freshness === 'fresh') return { variant: 'success' as const, icon: 'flash' as const };
-  if (freshness === 'recent') return { variant: 'warning' as const, icon: 'time' as const };
-  return { variant: 'neutral' as const, icon: 'alert-circle' as const };
 };
 
 export const FuelCard = ({ result }: Props) => {
@@ -51,7 +46,9 @@ export const FuelCard = ({ result }: Props) => {
     );
   }
 
-  const fb = freshnessBadge(result.freshness);
+  const fbVariant = freshnessVariant(result.freshness);
+  const fbIcon = freshnessIcon(result.freshness);
+  const fbLabel = freshnessToLabel(result.freshness);
 
   const openMaps = () => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${result.latitude},${result.longitude}`;
@@ -87,7 +84,7 @@ export const FuelCard = ({ result }: Props) => {
       </View>
 
       <View style={styles.tags}>
-        <Badge variant={fb.variant} label={result.freshness} icon={fb.icon} />
+        <Badge variant={fbVariant} label={fbLabel} icon={fbIcon} />
       </View>
 
       <View style={styles.divider} />

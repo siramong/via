@@ -36,11 +36,8 @@ export const HomeScreen = () => {
   const prevFuelRef = useRef(preferredFuel);
   const hasAnimated = useRef(false);
 
-  const greetingOpacity = useSharedValue(0);
-  const greetingTranslateY = useSharedValue(16);
-  const titleOpacity = useSharedValue(0);
-  const titleTranslateY = useSharedValue(16);
-  const badgeOpacity = useSharedValue(0);
+  const headerOpacity = useSharedValue(0);
+  const headerTranslateY = useSharedValue(16);
   const cardOpacity = useSharedValue(0);
   const cardTranslateY = useSharedValue(24);
 
@@ -48,36 +45,18 @@ export const HomeScreen = () => {
     if (hasAnimated.current) return;
     hasAnimated.current = true;
 
-    greetingOpacity.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
-    greetingTranslateY.value = withTiming(0, { duration: 350, easing: Easing.out(Easing.cubic) });
-
-    setTimeout(() => {
-      titleOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
-      titleTranslateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
-    }, 150);
-
-    setTimeout(() => {
-      badgeOpacity.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.cubic) });
-    }, 300);
+    headerOpacity.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
+    headerTranslateY.value = withTiming(0, { duration: 350, easing: Easing.out(Easing.cubic) });
 
     setTimeout(() => {
       cardOpacity.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) });
       cardTranslateY.value = withSpring(0, { damping: 18, stiffness: 180 });
-    }, 450);
+    }, 200);
   }, []);
 
-  const greetingStyle = useAnimatedStyle(() => ({
-    opacity: greetingOpacity.value,
-    transform: [{ translateY: greetingTranslateY.value }],
-  }));
-
-  const titleStyle = useAnimatedStyle(() => ({
-    opacity: titleOpacity.value,
-    transform: [{ translateY: titleTranslateY.value }],
-  }));
-
-  const badgeStyle = useAnimatedStyle(() => ({
-    opacity: badgeOpacity.value,
+  const headerStyle = useAnimatedStyle(() => ({
+    opacity: headerOpacity.value,
+    transform: [{ translateY: headerTranslateY.value }],
   }));
 
   const cardStyle = useAnimatedStyle(() => ({
@@ -158,19 +137,16 @@ export const HomeScreen = () => {
           />
         }
       >
-        <View style={styles.welcomeRow}>
-          <View>
-            <Animated.Text style={[styles.greeting, greetingStyle]}>
-              {profile?.display_name ? `Hola, ${profile.display_name.split(' ')[0]}` : 'Hola'}
-            </Animated.Text>
-            <Animated.Text style={[styles.title, titleStyle]}>Mejor cerca</Animated.Text>
-          </View>
+        <Animated.View style={[styles.welcomeRow, headerStyle]}>
+          <Text style={styles.greeting}>
+            {profile?.display_name ? `Hola, ${profile.display_name.split(' ')[0]}` : 'Hola'}
+          </Text>
           {preferredFuel && (
-            <Animated.View style={[styles.fuelBadge, badgeStyle]}>
+            <View style={styles.fuelBadge}>
               <Text style={styles.fuelBadgeText}>{FUEL_DISPLAY[preferredFuel]}</Text>
-            </Animated.View>
+            </View>
           )}
-        </View>
+        </Animated.View>
         {bestStationResult && (
           <Animated.View style={[styles.featuredCard, cardStyle]}>
             <FuelCard result={bestStationResult} />
@@ -205,11 +181,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   greeting: {
-    color: colors.textSecondary,
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  title: {
     color: colors.textPrimary,
     fontSize: 28,
     fontWeight: '800',

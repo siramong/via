@@ -33,21 +33,25 @@ const LEAFLET_HTML = `
       50% { transform: scale(1.4); opacity: 0.4; }
       100% { transform: scale(1); opacity: 0.8; }
     }
+    .user-loc-wrap {
+      width: 32px; height: 32px;
+      position: relative;
+    }
     .user-loc-pulse {
-      width: 24px; height: 24px;
+      width: 32px; height: 32px;
       border-radius: 50%;
       background: rgba(76, 201, 240, 0.25);
       position: absolute;
-      top: -12px; left: -12px;
+      top: 0; left: 0;
       animation: pulse-dot 2s infinite;
     }
     .user-loc-dot {
-      width: 12px; height: 12px;
+      width: 14px; height: 14px;
       border-radius: 50%;
-      background: #034af8;
+      background: #4A7AF8;
       border: 2px solid #011360;
       position: absolute;
-      top: -6px; left: -6px;
+      top: 9px; left: 9px;
     }
   </style>
 </head>
@@ -64,8 +68,8 @@ const LEAFLET_HTML = `
 
     function setUserLocation(lat, lng) {
       if (userMarker) { map.removeLayer(userMarker); }
-      var html = '<div style="position:relative"><div class="user-loc-pulse"></div><div class="user-loc-dot"></div></div>';
-      var icon = L.divIcon({ className: '', html: html, iconSize: [24, 24], iconAnchor: [12, 12] });
+      var html = '<div class="user-loc-wrap"><div class="user-loc-pulse"></div><div class="user-loc-dot"></div></div>';
+      var icon = L.divIcon({ className: '', html: html, iconSize: [32, 32], iconAnchor: [16, 16] });
       userMarker = L.marker([lat, lng], { icon: icon, zIndexOffset: 1000 }).addTo(map);
     }
 
@@ -76,13 +80,12 @@ const LEAFLET_HTML = `
       data.forEach(function(m) {
         var isSelected = m.stationId === selectedId;
         var isBest = m.stationId === bestId;
-        var borderColor = isBest ? '#FFD700' : (isSelected ? '#35D07F' : '#034af8');
+        var borderColor = isBest ? '#FFD700' : (isSelected ? '#35D07F' : '#4A7AF8');
         var bgBadge = isBest ? '#FFD700' : (isSelected ? '#35D07F' : '#021A70');
-        var textColor = isBest ? '#011360' : (isSelected ? '#011360' : '#034af8');
-        var iconColor = isBest ? '#011360' : (isSelected ? '#011360' : '#034af8');
+        var textColor = isBest ? '#011360' : (isSelected ? '#011360' : '#A6B0D6');
+        var iconColor = isBest ? '#011360' : (isSelected ? '#011360' : '#4A7AF8');
 
-        var starHtml = isBest ? '<span style="position:absolute;top:-8px;right:-8px;font-size:14px;z-index:1">\\u2B50</span>' : '';
-        var html = '<div style="display:flex;flex-direction:column;align-items:center;position:relative">' + starHtml +
+        var html = '<div style="display:flex;flex-direction:column;align-items:center;position:relative">' +
           '<div style="background:' + bgBadge + ';border:1px solid ' + borderColor + ';border-radius:12px;padding:3px 8px;color:' + textColor + ';font-size:11px;font-weight:700;white-space:nowrap">' +
           (m.price ? '$' + m.price.toFixed(2) : '?') +
           '</div><div style="width:26px;height:26px;margin-top:2px;border-radius:13px;background:rgba(18,26,46,0.78);border:1.5px solid ' + borderColor + ';display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="' + iconColor + '"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div></div>';
@@ -249,20 +252,13 @@ export const MapBackground = ({
         pointerEvents={interactive ? 'auto' : 'none'}
       />
       <LinearGradient
-        colors={[colors.overlay, 'transparent']}
+        colors={['rgba(1, 10, 48, 0.4)', 'transparent']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.topFade}
         pointerEvents="none"
       />
-      <LinearGradient
-        colors={['transparent', colors.overlay]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.bottomFade}
-        pointerEvents="none"
-      />
-      <View style={styles.overlay} pointerEvents="none" />
+
       {interactive && coords && (
         <Pressable style={styles.locationBtn} onPress={recenter}>
           <Ionicons name="locate" size={20} color={colors.primary} />
@@ -279,23 +275,12 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: colors.background,
   },
-  overlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(5, 8, 18, 0.35)',
-  },
   topFade: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: '35%',
-  },
-  bottomFade: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '45%',
   },
   locationBtn: {
     position: 'absolute',

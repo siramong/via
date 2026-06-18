@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   stepText: {
-    color: colors.primary,
+    color: colors.accent,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   fuelOptionTextSelected: {
-    color: colors.primary,
+    color: colors.accent,
   },
   errorCard: {
     flexDirection: 'row',

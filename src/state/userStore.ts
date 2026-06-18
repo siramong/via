@@ -24,6 +24,17 @@ type UserState = {
   updatePreferredFuel: (fuelType: FuelType | null) => Promise<void>;
 };
 
+const ensureProfileWithRetry = async (session: Session, retries = 2): Promise<UserProfile | null> => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await ensureUserProfile(session);
+    } catch {
+      if (i === retries - 1) return null;
+    }
+  }
+  return null;
+};
+
 export const useUserStore = create<UserState>((set, get) => ({
   session: null,
   profile: null,
@@ -115,8 +126,13 @@ export const useUserStore = create<UserState>((set, get) => ({
       const { data: authData } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
         set({ session: nextSession });
         if (nextSession) {
-          const profile = await ensureUserProfile(nextSession);
-          set({ profile, status: 'ready' });
+          const profile = await ensureProfileWithRetry(nextSession);
+          if (profile) {
+            set({ profile, status: 'ready' });
+          } else {
+            console.warn('[Auth] Could not create profile after retries, session active without profile');
+            set({ status: 'ready' });
+          }
         } else {
           set({ profile: null });
         }

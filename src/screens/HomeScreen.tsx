@@ -26,7 +26,7 @@ const needsOnboarding = (profile: { display_name: string | null; preferred_fuel:
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
-  const { coords, refresh, status: locationStatus } = useLocationStore();
+  const { coords, refresh, startWatching, stopWatching, status: locationStatus } = useLocationStore();
   const { profile } = useUserStore();
   const [bestStationResult, setBestStationResult] = useState<any>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -119,8 +119,9 @@ export const HomeScreen = () => {
   }, [coords, preferredFuel]);
 
   useEffect(() => {
-    refresh().catch(() => {});
-  }, [refresh]);
+    startWatching().catch(() => {});
+    return () => stopWatching();
+  }, [startWatching, stopWatching]);
 
   useEffect(() => {
     if (coords) {
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   fuelBadgeText: {
-    color: colors.primary,
+    color: colors.accent,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,

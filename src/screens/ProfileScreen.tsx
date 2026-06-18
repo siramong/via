@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   fuelOptionTextSelected: {
-    color: colors.primary,
+    color: colors.accent,
   },
   dangerButton: {
     marginTop: spacing.xl,

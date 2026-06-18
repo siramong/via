@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, Easing } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MapBackground } from '../components/MapView';
 import { MapSearchBar } from '../components/MapSearchBar';
@@ -14,7 +15,9 @@ import { colors, radius, spacing } from '../theme';
 import type { StationMarker } from '../types';
 
 export const MapScreen = () => {
-  const { coords, refresh, status } = useLocationStore();
+  const insets = useSafeAreaInsets();
+  const searchBarTop = insets.top + spacing.md;
+  const { coords, refresh, startWatching, stopWatching, status } = useLocationStore();
   const { profile, consumeAccess } = useUserStore();
   const navigation = useNavigation<any>();
   const [allMarkers, setAllMarkers] = useState<StationMarker[]>([]);
@@ -71,8 +74,9 @@ export const MapScreen = () => {
   const preferredFuel = profile?.preferred_fuel;
 
   useEffect(() => {
-    refresh().catch(() => {});
-  }, [refresh]);
+    startWatching().catch(() => {});
+    return () => stopWatching();
+  }, [startWatching, stopWatching]);
 
   // Lock state: derived from accessRemaining, no side effects
   useEffect(() => {
@@ -173,7 +177,7 @@ export const MapScreen = () => {
         </View>
       )}
       {locked && (
-        <View style={styles.lockedBanner}>
+        <View style={[styles.lockedBanner, { top: searchBarTop }]}>
           <Ionicons name="lock-closed" size={14} color={colors.warning} />
           <Text style={styles.lockedBannerText}>
             Acceso bloqueado — contribuye para buscar y actualizar
@@ -185,13 +189,13 @@ export const MapScreen = () => {
       )}
       <StationDetailSheet station={selectedStation} onClose={handleCloseSheet} />
       {!locked && (
-        <Animated.View style={[styles.refreshBtn, refreshStyle]}>
+        <Animated.View style={[styles.refreshBtn, refreshStyle, { top: searchBarTop + 50 }]}>
           <Pressable onPress={handleRefreshMarkers}>
             <Ionicons name="refresh" size={18} color={colors.primary} />
           </Pressable>
         </Animated.View>
       )}
-      <Animated.View style={[styles.accessBadge, badgeStyle]}>
+      <Animated.View style={[styles.accessBadge, badgeStyle, { top: searchBarTop + 96 }]}>
         <Ionicons name="flash" size={12} color={colors.primary} />
         <Text style={styles.accessText}>{accessRemaining}</Text>
       </Animated.View>
@@ -213,7 +217,6 @@ const styles = StyleSheet.create({
   },
   lockedBanner: {
     position: 'absolute',
-    top: 60,
     left: spacing.md,
     right: spacing.md,
     flexDirection: 'row',
@@ -270,7 +273,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   accessText: {
-    color: colors.primary,
+    color: colors.accent,
     fontSize: 12,
     fontWeight: '700',
   },

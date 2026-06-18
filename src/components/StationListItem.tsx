@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rank: {
-    color: colors.primary,
+    color: colors.accent,
     fontSize: 14,
     fontWeight: '800',
   },

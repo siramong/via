@@ -106,7 +106,7 @@ export const ContributeScreen = () => {
         mediaTypes: ['images'],
         quality: 0.5,
         cameraType: ImagePicker.CameraType.back,
-        allowsEditing: true,
+        allowsEditing: false,
       });
 
       if (result.canceled) {

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import type { Session } from '@supabase/supabase-js';
-import type { FuelType, UserProfile, UserReport } from '../types';
+import type { FuelType, FuelPriceInput, UserProfile, UserReport } from '../types';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -91,4 +91,23 @@ export const getUserReports = async (profileId: string, limit = 10): Promise<Use
     status: r.status,
     created_at: r.created_at,
   }));
+};
+
+export const getStationPrices = async (stationId: string): Promise<FuelPriceInput> => {
+  const { data, error } = await supabase
+    .from('fuel_prices')
+    .select('fuel_type, price')
+    .eq('station_id', stationId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  const latest: Record<string, number> = {};
+  for (const row of data ?? []) {
+    const ft = row.fuel_type as FuelType;
+    if (!latest[ft]) {
+      latest[ft] = Number(row.price);
+    }
+  }
+  return latest as FuelPriceInput;
 };

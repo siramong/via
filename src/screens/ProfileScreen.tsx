@@ -17,6 +17,7 @@ import { useUserStore } from '../state/userStore';
 import { getUserReports } from '../services/supabase';
 import { AccessCounter } from '../components/AccessCounter';
 import { Badge } from '../components/ui/Badge';
+import { LeaderboardSheet } from '../components/LeaderboardSheet';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { useScalePress } from '../hooks/useScalePress';
 import { colors, radius, spacing, typography } from '../theme';
@@ -53,6 +54,7 @@ export const ProfileScreen = () => {
   const [reportsLoading, setReportsLoading] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
   const [editName, setEditName] = useState('');
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const hasAnimated = useRef(false);
 
   const headerOpacity = useSharedValue(0);
@@ -298,6 +300,20 @@ export const ProfileScreen = () => {
           </Text>
         </Animated.View>
 
+        {/* Leaderboard */}
+        <Animated.View style={[styles.leaderboardCard, section4Style]}>
+          <Pressable onPress={() => setShowLeaderboard(true)} style={styles.leaderboardPress}>
+            <View style={styles.leaderboardLeft}>
+              <Ionicons name="trophy" size={18} color={colors.warning} />
+              <View>
+                <Text style={styles.leaderboardTitle}>Ranking de contribuidores</Text>
+                <Text style={styles.leaderboardSub}>Los mejores según su reputación</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
+        </Animated.View>
+
         {/* Sign out */}
         <Animated.View style={[signOutScale.animatedStyle, signOutStyle]}>
           <Pressable style={styles.dangerButton} onPress={handleSignOut} onPressIn={signOutScale.onPressIn} onPressOut={signOutScale.onPressOut} disabled={status === 'loading'}>
@@ -312,6 +328,10 @@ export const ProfileScreen = () => {
           </Pressable>
         </Animated.View>
       </ScrollView>
+
+      {showLeaderboard && profile && (
+        <LeaderboardSheet currentUserId={profile.id} onClose={() => setShowLeaderboard(false)} />
+      )}
 
       {/* Edit name modal */}
       <Modal visible={showNameModal} transparent animationType="fade" onRequestClose={() => setShowNameModal(false)}>
@@ -673,5 +693,34 @@ const styles = StyleSheet.create({
   modalSaveText: {
     color: colors.background,
     fontWeight: '700',
+  },
+  leaderboardCard: {
+    marginTop: spacing.xl,
+    backgroundColor: colors.glass,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  leaderboardPress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+  },
+  leaderboardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  leaderboardTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  leaderboardSub: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
   },
 });

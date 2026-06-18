@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -13,6 +13,7 @@ import { AuthScreen } from './src/screens/AuthScreen';
 import { useUserStore } from './src/state/userStore';
 import { colors, shadows } from './src/theme';
 import { ToastContainer } from './src/components/ui/Toast';
+import { registerForPushNotifications, savePushToken, addNotificationResponseReceivedListener } from './src/services/notifications';
 
 const Tab = createBottomTabNavigator();
 
@@ -151,7 +152,8 @@ const AppTabs = () => (
 );
 
 export default function App() {
-  const { session, bootstrap } = useUserStore();
+  const { session, profile, bootstrap } = useUserStore();
+  const notifListener = useRef<{ remove: () => void } | null>(null);
 
   useEffect(() => {
     const unsubscribe = bootstrap();
@@ -159,6 +161,25 @@ export default function App() {
       unsubscribe.then((fn) => fn());
     };
   }, [bootstrap]);
+
+  // Register push notifications when session + profile are ready
+  useEffect(() => {
+    if (!session || !profile) return;
+    registerForPushNotifications()
+      .then((token) => {
+        if (token) savePushToken(profile.id, token).catch(() => {});
+      })
+      .catch(() => {});
+  }, [session, profile]);
+
+  // Handle notification tap - navigate to map
+  useEffect(() => {
+    notifListener.current = addNotificationResponseReceivedListener((response) => {
+      // User tapped a push notification — could navigate to specific station
+      // For now, no action needed since user is already in the app
+    });
+    return () => notifListener.current?.remove();
+  }, []);
 
   return (
     <SafeAreaProvider>

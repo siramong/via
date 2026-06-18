@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MapBackground } from '../components/MapView';
 import { MapSearchBar } from '../components/MapSearchBar';
 import { StationDetailSheet } from '../components/StationDetailSheet';
+import { useFavoritesStore } from '../state/favoritesStore';
 import { useLocationStore } from '../state/locationStore';
 import { useUserStore } from '../state/userStore';
 import { getBestStation, getNearbyStations } from '../services/pricing';
@@ -19,6 +20,7 @@ export const MapScreen = () => {
   const searchBarTop = insets.top + spacing.md;
   const { coords, refresh, startWatching, stopWatching, status } = useLocationStore();
   const { profile, consumeAccess } = useUserStore();
+  const { ids: favIds, load: loadFavs, toggle: toggleFav } = useFavoritesStore();
   const navigation = useNavigation<any>();
   const [allMarkers, setAllMarkers] = useState<StationMarker[]>([]);
   const [loading, setLoading] = useState(false);
@@ -77,6 +79,11 @@ export const MapScreen = () => {
     startWatching().catch(() => {});
     return () => stopWatching();
   }, [startWatching, stopWatching]);
+
+  // Load favorites when profile is ready
+  useEffect(() => {
+    if (profile) loadFavs(profile.id);
+  }, [profile, loadFavs]);
 
   // Lock state: derived from accessRemaining, no side effects
   useEffect(() => {
@@ -187,7 +194,12 @@ export const MapScreen = () => {
             </Pressable>
         </View>
       )}
-      <StationDetailSheet station={selectedStation} onClose={handleCloseSheet} />
+      <StationDetailSheet
+        station={selectedStation}
+        onClose={handleCloseSheet}
+        onToggleFav={profile ? (id) => toggleFav(profile.id, id) : undefined}
+        isFav={selectedStation ? favIds.includes(selectedStation.stationId) : false}
+      />
       {!locked && (
         <Animated.View style={[styles.refreshBtn, refreshStyle, { top: searchBarTop + 50 }]}>
           <Pressable onPress={handleRefreshMarkers}>

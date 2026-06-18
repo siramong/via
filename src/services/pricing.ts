@@ -36,6 +36,7 @@ export const getBestStation = async (coords: Coordinates, preferredFuel?: FuelTy
     distanceMeters: best.station.distanceMeters,
     trustScore: best.station.trustScore ?? 50,
     freshness: best.station.freshness ?? 'stale',
+    priceDate: best.station.priceDate,
   };
 };
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -104,35 +104,29 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
         );
       })}
 
-      <View
+      <Pressable
+        onPress={handleFabPress}
         style={{
           position: 'absolute',
-          left: 0,
-          right: 0,
-          top: -16,
+          top: -24,
+          alignSelf: 'center',
+          flexDirection: 'row',
           alignItems: 'center',
-          pointerEvents: 'box-none',
+          gap: 6,
+          backgroundColor: colors.primary,
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+          borderRadius: 20,
+          shadowColor: colors.primary,
+          shadowOpacity: 0.5,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 12,
         }}
       >
-        <Pressable
-          onPress={handleFabPress}
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: 26,
-            backgroundColor: colors.primary,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: colors.primary,
-            shadowOpacity: 0.5,
-            shadowRadius: 14,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 12,
-          }}
-        >
-          <Ionicons name="camera" size={22} color={colors.background} />
-        </Pressable>
-      </View>
+        <Ionicons name="camera" size={16} color={colors.background} />
+        <Text style={{ color: colors.background, fontSize: 13, fontWeight: '700' }}>Capturar</Text>
+      </Pressable>
     </View>
   );
 };

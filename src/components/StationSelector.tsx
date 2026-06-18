@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { stationRepository } from '../services/stationRepository';
 import { Button } from './ui/Button';
@@ -41,7 +41,7 @@ export const StationSelector = ({ selectedId, userCoords, onSelect, onClose }: P
   const backdropOpacity = useSharedValue(0);
 
   useEffect(() => {
-    translateY.value = withSpring(0, { damping: 22, stiffness: 200 });
+    translateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) });
     backdropOpacity.value = withTiming(1, { duration: 200 });
   }, []);
 

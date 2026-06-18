@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { colors, radius, shadows, spacing, typography } from '../theme';
@@ -39,7 +39,7 @@ export const LeaderboardSheet = ({ currentUserId, onClose }: Props) => {
   const backdropOpacity = useSharedValue(0);
 
   useEffect(() => {
-    translateY.value = withSpring(0, { damping: 22, stiffness: 200 });
+    translateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) });
     backdropOpacity.value = withTiming(1, { duration: 200 });
   }, []);
 
@@ -73,7 +73,7 @@ export const LeaderboardSheet = ({ currentUserId, onClose }: Props) => {
   }));
 
   const handleClose = useCallback(() => {
-    translateY.value = withSpring(SHEET_HEIGHT, { damping: 22, stiffness: 200 });
+    translateY.value = withTiming(SHEET_HEIGHT, { duration: 250, easing: Easing.out(Easing.quad) });
     backdropOpacity.value = withTiming(0, { duration: 150 });
     setTimeout(onClose, 200);
   }, [onClose]);

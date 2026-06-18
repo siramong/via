@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { Linking, Share, StyleSheet, Text, View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
-import { freshnessToLabel, freshnessVariant, freshnessIcon } from '../utils/freshness';
+import { monthlyFreshnessLabel, monthlyFreshnessVariant, monthlyFreshnessIcon } from '../utils/freshness';
 import type { StationResult } from '../types';
 
 type Props = {
@@ -24,7 +24,7 @@ export const FuelCard = ({ result }: Props) => {
 
   useEffect(() => {
     opacity.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
-    translateY.value = withSpring(0, { damping: 18, stiffness: 180 });
+    translateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) });
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -46,9 +46,9 @@ export const FuelCard = ({ result }: Props) => {
     );
   }
 
-  const fbVariant = freshnessVariant(result.freshness);
-  const fbIcon = freshnessIcon(result.freshness);
-  const fbLabel = freshnessToLabel(result.freshness);
+  const fbVariant = monthlyFreshnessVariant(result.priceDate);
+  const fbIcon = monthlyFreshnessIcon(result.priceDate);
+  const fbLabel = monthlyFreshnessLabel(result.priceDate);
 
   const openMaps = () => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${result.latitude},${result.longitude}`;

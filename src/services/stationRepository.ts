@@ -58,6 +58,7 @@ class StationRepository {
       price: station.price ? Number(station.price) : undefined,
       fuelType: station.fuel_type ?? undefined,
       freshness: station.freshness ?? undefined,
+      priceDate: station.price_date ?? undefined,
       trustScore: station.trust_score ? Number(station.trust_score) : undefined,
       brand: station.brand ?? undefined,
       city: station.city ?? undefined,

@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FuelCard } from '../components/FuelCard';
 import { MapBackground } from '../components/MapView';
@@ -50,7 +50,7 @@ export const HomeScreen = () => {
 
     setTimeout(() => {
       cardOpacity.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) });
-      cardTranslateY.value = withSpring(0, { damping: 18, stiffness: 180 });
+      cardTranslateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) });
     }, 200);
   }, []);
 
@@ -82,6 +82,7 @@ export const HomeScreen = () => {
       fuelType: bestStationResult.fuelType,
       trustScore: bestStationResult.trustScore,
       freshness: bestStationResult.freshness,
+      priceDate: bestStationResult.priceDate,
     } satisfies StationMarker];
   }, [bestStationResult]);
 

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Dimensions, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { FUEL_DISPLAY } from '../constants/fuelLabels';
 import { getStationPrices } from '../services/supabase';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
-import { freshnessToLabel, freshnessVariant, freshnessIcon } from '../utils/freshness';
+import { monthlyFreshnessLabel, monthlyFreshnessVariant, monthlyFreshnessIcon } from '../utils/freshness';
 import type { FuelPriceInput, FuelType, StationMarker } from '../types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -32,7 +32,7 @@ export const StationDetailSheet = ({ station, onClose, onToggleFav, isFav }: Pro
 
   useEffect(() => {
     if (station) {
-      translateY.value = withSpring(0, { damping: 22, stiffness: 200 });
+      translateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) });
       backdropOpacity.value = withTiming(1, { duration: 200 });
       getStationPrices(station.stationId).then(setPrices).catch(() => {});
     } else {
@@ -136,13 +136,11 @@ export const StationDetailSheet = ({ station, onClose, onToggleFav, isFav }: Pro
           ) : null}
 
           <View style={styles.tags}>
-            {station.freshness && (
-              <Badge
-                variant={freshnessVariant(station.freshness)}
-                label={freshnessToLabel(station.freshness)}
-                icon={freshnessIcon(station.freshness)}
-              />
-            )}
+            <Badge
+              variant={monthlyFreshnessVariant(station.priceDate)}
+              label={monthlyFreshnessLabel(station.priceDate)}
+              icon={monthlyFreshnessIcon(station.priceDate)}
+            />
             {station.trustScore != null && (
               <Badge
                 variant="neutral"

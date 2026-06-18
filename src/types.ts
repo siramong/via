@@ -14,6 +14,7 @@ export type StationResult = {
   distanceMeters: number;
   trustScore: number;
   freshness: Freshness;
+  priceDate?: string;
   brand?: string;
   city?: string;
   province?: string;
@@ -28,6 +29,7 @@ export type StationMarker = {
   price?: number;
   fuelType?: FuelType;
   freshness?: Freshness;
+  priceDate?: string;
   trustScore?: number;
   brand?: string;
   city?: string;

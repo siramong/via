@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ColorValue, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useToastStore, type ToastVariant } from '../../state/toastStore';
@@ -21,7 +21,7 @@ const ToastItem = ({ id, message, variant }: { id: string; message: string; vari
   useEffect(() => {
     if (hasAnimated.current) return;
     hasAnimated.current = true;
-    translateY.value = withSpring(0, { damping: 18, stiffness: 200 });
+    translateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) });
     opacity.value = withTiming(1, { duration: 200 });
   }, []);
 

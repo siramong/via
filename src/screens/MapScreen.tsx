@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,16 +44,16 @@ export const MapScreen = () => {
     hasAnimated.current = true;
 
     searchOpacity.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
-    searchTranslateY.value = withSpring(0, { damping: 18, stiffness: 200 });
+    searchTranslateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) });
 
     setTimeout(() => {
       refreshOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
-      refreshScale.value = withSpring(1, { damping: 15, stiffness: 200 });
+      refreshScale.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.quad) });
     }, 200);
 
     setTimeout(() => {
       badgeOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
-      badgeScale.value = withSpring(1, { damping: 15, stiffness: 200 });
+      badgeScale.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.quad) });
     }, 350);
   }, []);
 
@@ -201,7 +201,7 @@ export const MapScreen = () => {
         isFav={selectedStation ? favIds.includes(selectedStation.stationId) : false}
       />
       {!locked && (
-        <Animated.View style={[styles.refreshBtn, refreshStyle, { top: searchBarTop + 50 }]}>
+        <Animated.View style={[styles.refreshBtn, refreshStyle, { top: searchBarTop + 76 }]}>
           <Pressable onPress={handleRefreshMarkers}>
             <Ionicons name="refresh" size={18} color={colors.primary} />
           </Pressable>

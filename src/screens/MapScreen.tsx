@@ -90,6 +90,8 @@ export const MapScreen = () => {
     setLocked(accessRemaining <= 0);
   }, [accessRemaining]);
 
+  const prevFuelRef = useRef(preferredFuel);
+
   // Data loading: runs once when coords become available
   useEffect(() => {
     if (!coords || loaded.current) return;
@@ -109,7 +111,20 @@ export const MapScreen = () => {
         setAllMarkers([]);
       })
       .finally(() => setLoading(false));
-  }, [coords, preferredFuel]);
+  // preferredFuel intentionally omitted — handled by the fuel-change effect below
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coords]);
+
+  // Re-fetch best station when preferred fuel changes after initial load
+  useEffect(() => {
+    if (!loaded.current || !coords || preferredFuel === prevFuelRef.current) return;
+    prevFuelRef.current = preferredFuel;
+    getBestStation(coords, preferredFuel)
+      .then((best) => {
+        if (best) setBestStationId(best.stationId);
+      })
+      .catch(() => {});
+  }, [preferredFuel, coords]);
 
   const handleRefreshMarkers = useCallback(() => {
     if (!coords) return;

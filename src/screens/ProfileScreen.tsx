@@ -145,8 +145,12 @@ export const ProfileScreen = () => {
   const handleSaveName = useCallback(async () => {
     const trimmed = editName.trim();
     if (!trimmed || !profile) return;
-    await updateDisplayName(trimmed);
-    setShowNameModal(false);
+    try {
+      await updateDisplayName(trimmed);
+      setShowNameModal(false);
+    } catch (err) {
+      console.error('[Profile] Failed to update name:', err);
+    }
   }, [editName, profile, updateDisplayName]);
 
   const handlePreferredFuel = useCallback((fuel: FuelType | null) => {

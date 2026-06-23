@@ -61,7 +61,11 @@ export const useUserStore = create<UserState>((set, get) => ({
     const result = await WebBrowser.openAuthSessionAsync(data.url, 'via://auth/callback');
 
     if (result.type !== 'success') {
-      set({ status: 'cancel' === result.type ? 'idle' : 'error', error: 'Autenticación cancelada' });
+      if (result.type === 'cancel') {
+        set({ status: 'idle', error: null });
+      } else {
+        set({ status: 'error', error: 'Autenticación cancelada' });
+      }
       return;
     }
 

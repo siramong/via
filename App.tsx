@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -108,15 +108,15 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
         onPress={handleFabPress}
         style={{
           position: 'absolute',
-          top: -24,
+          top: -42,
           alignSelf: 'center',
           flexDirection: 'row',
           alignItems: 'center',
           gap: 6,
           backgroundColor: colors.primary,
           paddingHorizontal: 16,
-          paddingVertical: 8,
-          borderRadius: 20,
+          paddingVertical: 10,
+          borderRadius: 22,
           shadowColor: colors.primary,
           shadowOpacity: 0.5,
           shadowRadius: 14,
@@ -146,13 +146,13 @@ const AppTabs = () => (
 );
 
 export default function App() {
-  const { session, profile, bootstrap } = useUserStore();
+  const { session, profile, bootstrap, status } = useUserStore();
   const notifListener = useRef<{ remove: () => void } | null>(null);
 
   useEffect(() => {
     const unsubscribe = bootstrap();
     return () => {
-      unsubscribe.then((fn) => fn());
+      unsubscribe.then((fn) => fn()).catch(() => {});
     };
   }, [bootstrap]);
 
@@ -174,6 +174,14 @@ export default function App() {
     });
     return () => notifListener.current?.remove();
   }, []);
+
+  if (status === 'idle' || status === 'loading') {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#011360', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color="#4A7AF8" size="large" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>

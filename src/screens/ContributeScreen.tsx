@@ -60,13 +60,16 @@ export const ContributeScreen = () => {
     transform: [{ translateY: translateY.value }],
   }));
 
+  const selectedStationRef = useRef(selectedStation);
+  selectedStationRef.current = selectedStation;
+
   const loadNearbyAndAutoSelect = useCallback(async () => {
     if (!coords) return;
     setStationsLoading(true);
     try {
       const stations = await stationRepository.getNearbyStations(coords, 10000, 50);
       setStationsNearby(stations);
-      if (stations.length > 0 && !selectedStation) {
+      if (stations.length > 0 && !selectedStationRef.current) {
         const closest = stations[0];
         if (closest.distanceMeters <= 1000) {
           setSelectedStation(closest);
@@ -77,7 +80,7 @@ export const ContributeScreen = () => {
     } finally {
       setStationsLoading(false);
     }
-  }, [coords, selectedStation]);
+  }, [coords]);
 
   useEffect(() => {
     if (step === 'review' && coords) {

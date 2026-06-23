@@ -197,7 +197,8 @@ export const MapBackground = ({
   useEffect(() => {
     if (coords && webviewReady) {
       sendUserLocation(coords.latitude, coords.longitude);
-      setTimeout(() => flyToCoords(coords.latitude, coords.longitude), 200);
+      const t = setTimeout(() => flyToCoords(coords.latitude, coords.longitude), 200);
+      return () => clearTimeout(t);
     }
   }, [coords, webviewReady, flyToCoords, sendUserLocation]);
 
@@ -205,7 +206,8 @@ export const MapBackground = ({
     if (coords && markers.length > 0 && webviewReady) {
       const points: Array<[number, number]> = markers.map(m => [m.latitude, m.longitude] as [number, number]);
       points.push([coords.latitude, coords.longitude]);
-      setTimeout(() => postToWebview({ type: 'fitAll', points, topOffset: topContentOffset }), 500);
+      const t = setTimeout(() => postToWebview({ type: 'fitAll', points, topOffset: topContentOffset }), 500);
+      return () => clearTimeout(t);
     }
   }, [coords, markers, webviewReady, postToWebview, topContentOffset]);
 
